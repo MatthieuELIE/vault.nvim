@@ -61,4 +61,19 @@ M.toggle_checkbox = function()
     end
 end
 
+M.setup = function(opts)
+    opts = opts or {}
+    if opts.vault_path then
+        vault = vim.fn.expand(opts.vault_path)
+    end
+
+    vim.api.nvim_create_user_command('VaultToggleTodo', function()
+        M.toggle_todo()
+    end, {})
+
+    vim.api.nvim_create_user_command('VaultToggleCheckbox', function()
+        M.toggle_checkbox()
+    end, {})
+end
+
 return M
