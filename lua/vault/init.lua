@@ -1,6 +1,7 @@
 local M = {}
 
 local vault = vim.fn.expand(vim.env.VAULT_PATH or '~/vault')
+local split_cmd = 'vsplit'
 
 M.get_project_root = function()
     local path = vim.fn.getcwd()
@@ -36,14 +37,14 @@ M.toggle_todo = function()
             vim.api.nvim_buf_call(buf, function()
                 vim.cmd('silent! write')
             end)
-            vim.api.nvim_win_close(win, false)
+            pcall(vim.api.nvim_win_close, win, false)
             vim.api.nvim_buf_delete(buf, {})
             return
         end
     end
 
     vim.fn.mkdir(vault .. '/' .. project, 'p')
-    vim.cmd('edit ' .. vim.fn.fnameescape(path))
+    vim.cmd(split_cmd .. ' ' .. vim.fn.fnameescape(path))
 end
 
 M.toggle_checkbox = function()
@@ -65,6 +66,9 @@ M.setup = function(opts)
     opts = opts or {}
     if opts.vault_path then
         vault = vim.fn.expand(opts.vault_path)
+    end
+    if opts.split then
+        split_cmd = opts.split
     end
 
     vim.api.nvim_create_user_command('VaultToggleTodo', function()
