@@ -74,6 +74,30 @@ M.setup = function(opts)
     vim.api.nvim_create_user_command('VaultToggleCheckbox', function()
         M.toggle_checkbox()
     end, {})
+
+    local default_keys = {
+        toggle_todo = '<leader>td',
+        toggle_checkbox = '<leader>tc',
+    }
+    local keys = vim.tbl_deep_extend('force', default_keys, opts.keys or {})
+
+    if keys.toggle_todo then
+        vim.keymap.set('n', keys.toggle_todo, M.toggle_todo, { desc = 'Toggle project todo' })
+    end
+
+    vim.api.nvim_create_autocmd('BufEnter', {
+        pattern = vault .. '/*/todos.md',
+        callback = function(args)
+            if keys.toggle_checkbox then
+                vim.keymap.set(
+                    'n',
+                    keys.toggle_checkbox,
+                    M.toggle_checkbox,
+                    { buffer = args.buf, desc = 'Toggle markdown checkbox' }
+                )
+            end
+        end,
+    })
 end
 
 return M
