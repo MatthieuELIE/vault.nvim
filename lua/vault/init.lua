@@ -4,27 +4,9 @@ local vault = vim.fn.expand(vim.env.VAULT_PATH or '~/vault')
 local split_cmd = 'vsplit'
 
 M.get_project_root = function()
-    local path = vim.fn.getcwd()
-    local markers = {
-        '.git',
-    }
-
-    while path and path ~= '' do
-        for _, marker in ipairs(markers) do
-            local marker_path = path .. '/' .. marker
-            if vim.fn.isdirectory(marker_path) == 1 or vim.fn.filereadable(marker_path) == 1 then
-                return vim.fn.fnamemodify(path, ':t')
-            end
-        end
-
-        local parent = vim.fn.fnamemodify(path, ':h')
-        if parent == path then
-            break
-        end
-        path = parent
-    end
-
-    return vim.fn.fnamemodify(vim.fn.getcwd(), ':t')
+    local found = vim.fs.find('.git', { upward = true, path = vim.fn.getcwd() })[1]
+    local root = found and vim.fs.dirname(found) or vim.fn.getcwd()
+    return vim.fn.fnamemodify(root, ':t')
 end
 
 M.toggle_todo = function()
@@ -37,6 +19,10 @@ M.toggle_todo = function()
             vim.api.nvim_buf_call(buf, function()
                 vim.cmd('silent! write')
             end)
+            if vim.bo[buf].modified then
+                vim.notify('vault.nvim: could not save todos.md', vim.log.levels.WARN)
+                return
+            end
             pcall(vim.api.nvim_win_close, win, false)
             vim.api.nvim_buf_delete(buf, {})
             return
@@ -48,6 +34,10 @@ M.toggle_todo = function()
 end
 
 M.toggle_checkbox = function()
+    if not vim.api.nvim_buf_get_name(0):match('todos%.md$') then
+        return
+    end
+
     local line = vim.api.nvim_get_current_line()
     local indent, state, rest = line:match('^(%s*)%- %[([ x])%](.*)')
 
@@ -71,22 +61,14 @@ M.setup = function(opts)
         split_cmd = opts.split
     end
 
-    vim.api.nvim_create_user_command('VaultToggleTodo', function()
-        M.toggle_todo()
-    end, {})
+    vim.api.nvim_create_user_command('VaultToggleTodo', M.toggle_todo, { force = true })
+    vim.api.nvim_create_user_command('VaultToggleCheckbox', M.toggle_checkbox, { force = true })
 
-    vim.api.nvim_create_user_command('VaultToggleCheckbox', function()
-        M.toggle_checkbox()
-    end, {})
-
-    local default_keys = {
-        toggle_todo = '<leader>td',
-        toggle_checkbox = '<leader>tc',
-    }
-    local keys = vim.tbl_deep_extend('force', default_keys, opts.keys or {})
+    local keys =
+        vim.tbl_extend('force', { toggle_todo = '<leader>td', toggle_checkbox = '<leader>tc' }, opts.keys or {})
 
     if keys.toggle_todo then
-        vim.keymap.set('n', keys.toggle_todo, M.toggle_todo, { desc = 'Toggle project todo' })
+        vim.keymap.set('n', keys.toggle_todo, M.toggle_todo, { noremap = true, desc = 'Toggle project todo' })
     end
 
     vim.api.nvim_create_autocmd('BufEnter', {
@@ -97,7 +79,7 @@ M.setup = function(opts)
                     'n',
                     keys.toggle_checkbox,
                     M.toggle_checkbox,
-                    { buffer = args.buf, desc = 'Toggle markdown checkbox' }
+                    { noremap = true, buffer = args.buf, desc = 'Toggle markdown checkbox' }
                 )
             end
         end,
