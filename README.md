@@ -31,8 +31,10 @@ You can customize the base path of your vault by setting the `VAULT_PATH` enviro
 
 ```lua
 opts = {
-    vault_path = '~/vault', -- or set $VAULT_PATH
-    split = 'vsplit',       -- 'split' for horizontal
+    vault_path  = '~/vault',        -- or set $VAULT_PATH
+    todos_path  = '~/vault/todos',  -- default: vault_path
+    daily_path  = '~/vault/daily',  -- default: vault_path/daily
+    split       = 'vsplit',         -- 'split' for horizontal
     keys = {
         toggle_todo     = '<leader>vt',
         toggle_checkbox = '<leader>vc',
