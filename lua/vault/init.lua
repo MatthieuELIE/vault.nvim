@@ -9,10 +9,7 @@ M.get_project_root = function()
     return vim.fn.fnamemodify(root, ':t')
 end
 
-M.toggle_todo = function()
-    local project = M.get_project_root()
-    local path = vault .. '/' .. project .. '/todos.md'
-
+local function open_or_close(path)
     for _, win in ipairs(vim.api.nvim_list_wins()) do
         local buf = vim.api.nvim_win_get_buf(win)
         if vim.api.nvim_buf_get_name(buf) == path then
@@ -20,7 +17,7 @@ M.toggle_todo = function()
                 vim.cmd('silent! write')
             end)
             if vim.bo[buf].modified then
-                vim.notify('vault.nvim: could not save todos.md', vim.log.levels.WARN)
+                vim.notify('vault.nvim: could not save ' .. vim.fn.fnamemodify(path, ':t'), vim.log.levels.WARN)
                 return
             end
             pcall(vim.api.nvim_win_close, win, false)
@@ -28,9 +25,16 @@ M.toggle_todo = function()
             return
         end
     end
-
-    vim.fn.mkdir(vault .. '/' .. project, 'p')
+    vim.fn.mkdir(vim.fn.fnamemodify(path, ':h'), 'p')
     vim.cmd(split_cmd .. ' ' .. vim.fn.fnameescape(path))
+end
+
+M.toggle_todo = function()
+    open_or_close(vault .. '/' .. M.get_project_root() .. '/todos.md')
+end
+
+M.toggle_diary = function()
+    open_or_close(vault .. '/daily/' .. os.date('%Y') .. '/' .. os.date('%m') .. '/' .. os.date('%Y-%m-%d') .. '.md')
 end
 
 M.toggle_checkbox = function()
@@ -63,12 +67,20 @@ M.setup = function(opts)
 
     vim.api.nvim_create_user_command('VaultToggleTodo', M.toggle_todo, { force = true })
     vim.api.nvim_create_user_command('VaultToggleCheckbox', M.toggle_checkbox, { force = true })
+    vim.api.nvim_create_user_command('VaultToggleDiary', M.toggle_diary, { force = true })
 
-    local keys =
-        vim.tbl_extend('force', { toggle_todo = '<leader>td', toggle_checkbox = '<leader>tc' }, opts.keys or {})
+    local keys = vim.tbl_extend('force', {
+        toggle_todo = '<leader>vt',
+        toggle_checkbox = '<leader>vc',
+        toggle_diary = '<leader>vd',
+    }, opts.keys or {})
 
     if keys.toggle_todo then
         vim.keymap.set('n', keys.toggle_todo, M.toggle_todo, { noremap = true, desc = 'Toggle project todo' })
+    end
+
+    if keys.toggle_diary then
+        vim.keymap.set('n', keys.toggle_diary, M.toggle_diary, { noremap = true, desc = 'Toggle today diary' })
     end
 
     vim.api.nvim_create_autocmd('BufEnter', {
