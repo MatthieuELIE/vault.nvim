@@ -113,7 +113,7 @@ describe('vault', function()
         vim.cmd = original_write
 
         assert.is_true(vim.bo[buf].modified)
-        assert.is_not_equal(-1, vim.fn.bufnr(expected_path))
+        assert.are_not.equal(-1, vim.fn.bufnr(expected_path))
         assert.are.equal(1, #notifications)
         assert.is_not_nil(notifications[1].msg:match('could not save'))
     end)
@@ -127,13 +127,13 @@ describe('vault', function()
 
         vault.toggle_todo()
 
-        vim.api.nvim_win_close = function(win, force)
+        vim.api.nvim_win_close = function(_win, _force)
             error('simulated window close failure')
         end
 
         vault.toggle_todo()
 
-        assert.is_not_equal(-1, vim.fn.bufnr(expected_path))
+        assert.are_not.equal(-1, vim.fn.bufnr(expected_path))
         assert.are.equal(1, #notifications)
         assert.is_not_nil(notifications[1].msg:match('could not close all windows'))
     end)
