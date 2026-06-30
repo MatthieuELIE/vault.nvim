@@ -12,6 +12,7 @@ M.get_project_root = function()
 end
 
 local function open_or_close(path)
+    path = vim.fs.normalize(path)
     local bufnr = vim.fn.bufnr(path)
     if bufnr ~= -1 then
         vim.api.nvim_buf_call(bufnr, function()
@@ -23,11 +24,20 @@ local function open_or_close(path)
             return
         end
 
+        local all_closed = true
         for _, win in ipairs(vim.fn.win_findbuf(bufnr)) do
-            pcall(vim.api.nvim_win_close, win, false)
+            local ok = pcall(vim.api.nvim_win_close, win, false)
+            if not ok then
+                all_closed = false
+            end
         end
 
-        vim.api.nvim_buf_delete(bufnr, {})
+        if not all_closed then
+            vim.notify('vault.nvim: could not close all windows for ' .. vim.fn.fnamemodify(path, ':t'), vim.log.levels.WARN)
+            return
+        end
+
+        vim.api.nvim_buf_delete(bufnr, { force = true })
         return
     end
     vim.fn.mkdir(vim.fn.fnamemodify(path, ':h'), 'p')
