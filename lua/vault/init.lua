@@ -33,7 +33,10 @@ local function open_or_close(path)
         end
 
         if not all_closed then
-            vim.notify('vault.nvim: could not close all windows for ' .. vim.fn.fnamemodify(path, ':t'), vim.log.levels.WARN)
+            vim.notify(
+                'vault.nvim: could not close all windows for ' .. vim.fn.fnamemodify(path, ':t'),
+                vim.log.levels.WARN
+            )
             return
         end
 
@@ -56,9 +59,7 @@ M.toggle_diary = function(date_str)
             t = os.time({ year = tonumber(y), month = tonumber(m), day = tonumber(d) })
         end
     end
-    open_or_close(
-        daily_root .. '/' .. os.date('%Y', t) .. '/' .. os.date('%m', t) .. '/' .. os.date('%d-%m-%Y', t) .. '.md'
-    )
+    open_or_close(daily_root .. os.date('/%Y/%m/%d-%m-%Y.md', t))
 end
 
 M.toggle_checkbox = function()
@@ -67,14 +68,15 @@ M.toggle_checkbox = function()
     end
 
     local line = vim.api.nvim_get_current_line()
-    local indent, state, rest = line:match('^(%s*)%- %[([ x])%](.*)')
+    local indent, content = line:match('^(%s*)(.*)')
+    local state, rest = content:match('^%- %[([ x])%](.*)')
 
-    if indent and state then
+    if state then
         local new_state = state == 'x' and ' ' or 'x'
         local new_line = string.format('%s- [%s]%s', indent, new_state, rest)
         vim.api.nvim_set_current_line(new_line)
     else
-        vim.api.nvim_set_current_line(line:match('^(%s*)') .. '- [ ] ' .. line:gsub('^%s*', ''))
+        vim.api.nvim_set_current_line(indent .. '- [ ] ' .. content)
     end
 end
 
