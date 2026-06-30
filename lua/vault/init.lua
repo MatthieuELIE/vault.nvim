@@ -12,20 +12,24 @@ M.get_project_root = function()
 end
 
 local function open_or_close(path)
-    for _, win in ipairs(vim.api.nvim_list_wins()) do
-        local buf = vim.api.nvim_win_get_buf(win)
-        if vim.api.nvim_buf_get_name(buf) == path then
-            vim.api.nvim_buf_call(buf, function()
-                vim.cmd('silent! write')
-            end)
-            if vim.bo[buf].modified then
-                vim.notify('vault.nvim: could not save ' .. vim.fn.fnamemodify(path, ':t'), vim.log.levels.WARN)
-                return
-            end
-            pcall(vim.api.nvim_win_close, win, false)
-            vim.api.nvim_buf_delete(buf, {})
+    vim.notify('LOCAL VERSION')
+    local bufnr = vim.fn.bufnr(path)
+    if bufnr ~= -1 then
+        vim.api.nvim_buf_call(bufnr, function()
+            vim.cmd('silent! write')
+        end)
+
+        if vim.bo[bufnr].modified then
+            vim.notify('vault.nvim: could not save ' .. vim.fn.fnamemodify(path, ':t'), vim.log.levels.WARN)
             return
         end
+
+        for _, win in ipairs(vim.fn.win_findbuf(bufnr)) do
+            pcall(vim.api.nvim_win_close, win, false)
+        end
+
+        vim.api.nvim_buf_delete(bufnr, {})
+        return
     end
     vim.fn.mkdir(vim.fn.fnamemodify(path, ':h'), 'p')
     vim.cmd(split_cmd .. ' ' .. vim.fn.fnameescape(path))
