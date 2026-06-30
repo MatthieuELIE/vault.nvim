@@ -12,7 +12,6 @@ M.get_project_root = function()
 end
 
 local function open_or_close(path)
-    vim.notify('LOCAL VERSION')
     local bufnr = vim.fn.bufnr(path)
     if bufnr ~= -1 then
         vim.api.nvim_buf_call(bufnr, function()
