@@ -12,20 +12,36 @@ M.get_project_root = function()
 end
 
 local function open_or_close(path)
-    for _, win in ipairs(vim.api.nvim_list_wins()) do
-        local buf = vim.api.nvim_win_get_buf(win)
-        if vim.api.nvim_buf_get_name(buf) == path then
-            vim.api.nvim_buf_call(buf, function()
-                vim.cmd('silent! write')
-            end)
-            if vim.bo[buf].modified then
-                vim.notify('vault.nvim: could not save ' .. vim.fn.fnamemodify(path, ':t'), vim.log.levels.WARN)
-                return
-            end
-            pcall(vim.api.nvim_win_close, win, false)
-            vim.api.nvim_buf_delete(buf, {})
+    path = vim.fs.normalize(path)
+    local bufnr = vim.fn.bufnr(path)
+    if bufnr ~= -1 then
+        vim.api.nvim_buf_call(bufnr, function()
+            vim.cmd('silent! write')
+        end)
+
+        if vim.bo[bufnr].modified then
+            vim.notify('vault.nvim: could not save ' .. vim.fn.fnamemodify(path, ':t'), vim.log.levels.WARN)
             return
         end
+
+        local all_closed = true
+        for _, win in ipairs(vim.fn.win_findbuf(bufnr)) do
+            local ok = pcall(vim.api.nvim_win_close, win, false)
+            if not ok then
+                all_closed = false
+            end
+        end
+
+        if not all_closed then
+            vim.notify(
+                'vault.nvim: could not close all windows for ' .. vim.fn.fnamemodify(path, ':t'),
+                vim.log.levels.WARN
+            )
+            return
+        end
+
+        vim.api.nvim_buf_delete(bufnr, { force = true })
+        return
     end
     vim.fn.mkdir(vim.fn.fnamemodify(path, ':h'), 'p')
     vim.cmd(split_cmd .. ' ' .. vim.fn.fnameescape(path))
@@ -43,9 +59,7 @@ M.toggle_diary = function(date_str)
             t = os.time({ year = tonumber(y), month = tonumber(m), day = tonumber(d) })
         end
     end
-    open_or_close(
-        daily_root .. '/' .. os.date('%Y', t) .. '/' .. os.date('%m', t) .. '/' .. os.date('%d-%m-%Y', t) .. '.md'
-    )
+    open_or_close(daily_root .. os.date('/%Y/%m/%d-%m-%Y.md', t))
 end
 
 M.toggle_checkbox = function()
@@ -54,14 +68,15 @@ M.toggle_checkbox = function()
     end
 
     local line = vim.api.nvim_get_current_line()
-    local indent, state, rest = line:match('^(%s*)%- %[([ x])%](.*)')
+    local indent, content = line:match('^(%s*)(.*)')
+    local state, rest = content:match('^%- %[([ x])%](.*)')
 
-    if indent and state then
+    if state then
         local new_state = state == 'x' and ' ' or 'x'
         local new_line = string.format('%s- [%s]%s', indent, new_state, rest)
         vim.api.nvim_set_current_line(new_line)
     else
-        vim.api.nvim_set_current_line(line:match('^(%s*)') .. '- [ ] ' .. line:gsub('^%s*', ''))
+        vim.api.nvim_set_current_line(indent .. '- [ ] ' .. content)
     end
 end
 
