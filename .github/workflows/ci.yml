@@ -26,6 +26,9 @@ jobs:
           repository: nvim-lua/plenary.nvim
           path: dependencies/plenary.nvim
       - name: Setup Neovim
-        uses: navarasu/setup-neovim-action@v3
+        uses: rhysd/action-setup-vim@v1
+        with:
+          neovim: true
+          version: stable
       - name: Run Tests
         run: nvim --headless -c "PlenaryBustedDirectory tests/ {minimal_init = 'tests/minimal_init.lua'}" -c "qa"

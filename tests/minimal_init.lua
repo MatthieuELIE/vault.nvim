@@ -1,2 +1,2 @@
-vim.opt.rtp:append(".")
-vim.opt.rtp:append("dependencies/plenary.nvim")
+vim.opt.rtp:append('.')
+vim.opt.rtp:append('dependencies/plenary.nvim')
