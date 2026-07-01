@@ -16,7 +16,7 @@ describe('vault', function()
         vim.fn.mkdir(test_vault, 'p')
         notifications = {}
         original_notify = vim.notify
-        vim.notify = function(msg, level)
+        vim.notify = function(msg, level) ---@diagnostic disable-line: duplicate-set-field
             table.insert(notifications, { msg = msg, level = level })
         end
         original_win_close = vim.api.nvim_win_close
@@ -61,10 +61,12 @@ describe('vault', function()
         assert.are.equal(-1, vim.fn.bufnr(expected_path))
 
         local file = io.open(expected_path, 'r')
-        assert.is_not_nil(file)
-        local content = file:read('*a')
-        file:close()
-        assert.are.equal('some todo content\n', content)
+        assert.truthy(file)
+        if file then
+            local content = file:read('*a')
+            file:close()
+            assert.are.equal('some todo content\n', content)
+        end
     end)
 
     it('handles paths with percent and hash characters correctly', function()
@@ -100,7 +102,7 @@ describe('vault', function()
         vim.bo[buf].modified = true
 
         local original_write = vim.cmd
-        vim.cmd = function(cmd_str)
+        vim.cmd = function(cmd_str) ---@diagnostic disable-line: duplicate-set-field
             if cmd_str == 'silent! write' then
                 return
             else
@@ -113,9 +115,9 @@ describe('vault', function()
         vim.cmd = original_write
 
         assert.is_true(vim.bo[buf].modified)
-        assert.are_not.equal(-1, vim.fn.bufnr(expected_path))
+        assert.not_equal(-1, vim.fn.bufnr(expected_path))
         assert.are.equal(1, #notifications)
-        assert.is_not_nil(notifications[1].msg:match('could not save'))
+        assert.truthy(notifications[1].msg:match('could not save'))
     end)
 
     it('aborts deletion and warns if window close fails', function()
@@ -127,14 +129,14 @@ describe('vault', function()
 
         vault.toggle_todo()
 
-        vim.api.nvim_win_close = function(_win, _force)
+        vim.api.nvim_win_close = function(_win, _force) ---@diagnostic disable-line: duplicate-set-field
             error('simulated window close failure')
         end
 
         vault.toggle_todo()
 
-        assert.are_not.equal(-1, vim.fn.bufnr(expected_path))
+        assert.not_equal(-1, vim.fn.bufnr(expected_path))
         assert.are.equal(1, #notifications)
-        assert.is_not_nil(notifications[1].msg:match('could not close all windows'))
+        assert.truthy(notifications[1].msg:match('could not close all windows'))
     end)
 end)
