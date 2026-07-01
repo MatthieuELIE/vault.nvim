@@ -139,4 +139,150 @@ describe('vault', function()
         assert.are.equal(1, #notifications)
         assert.truthy(notifications[1].msg:match('could not close all windows'))
     end)
+
+    it('opens today diary when no argument is provided', function()
+        vault.setup({
+            vault_path = test_vault,
+            daily_path = test_vault .. '/daily',
+        })
+        local original_os_date = os.date
+        os.date = function(fmt, time)
+            if fmt == '*t' then
+                return { year = 2025, month = 12, day = 25 }
+            end
+            return original_os_date(fmt, time)
+        end
+
+        vault.toggle_diary()
+
+        os.date = original_os_date
+
+        local expected_path = resolve(test_vault) .. '/daily/2025/12/25-12-2025.md'
+        local current_buf = vim.api.nvim_get_current_buf()
+        local buf_name = vim.api.nvim_buf_get_name(current_buf)
+        assert.are.equal(expected_path, resolve(buf_name))
+    end)
+
+    it('opens diary for valid date argument', function()
+        vault.setup({
+            vault_path = test_vault,
+            daily_path = test_vault .. '/daily',
+        })
+
+        vault.toggle_diary('2026-05-15')
+
+        local expected_path = resolve(test_vault) .. '/daily/2026/05/15-05-2026.md'
+        local current_buf = vim.api.nvim_get_current_buf()
+        local buf_name = vim.api.nvim_buf_get_name(current_buf)
+        assert.are.equal(expected_path, resolve(buf_name))
+    end)
+
+    it('does not crash and opens today diary for invalid date argument', function()
+        vault.setup({
+            vault_path = test_vault,
+            daily_path = test_vault .. '/daily',
+        })
+        local original_os_date = os.date
+        os.date = function(fmt, time)
+            if fmt == '*t' then
+                return { year = 2025, month = 12, day = 25 }
+            end
+            return original_os_date(fmt, time)
+        end
+
+        vault.toggle_diary('invalid-date')
+
+        os.date = original_os_date
+
+        local expected_path = resolve(test_vault) .. '/daily/2025/12/25-12-2025.md'
+        local current_buf = vim.api.nvim_get_current_buf()
+        local buf_name = vim.api.nvim_buf_get_name(current_buf)
+        assert.are.equal(expected_path, resolve(buf_name))
+    end)
+
+    it('closes diary buffer when already open saving its content', function()
+        vault.setup({
+            vault_path = test_vault,
+            daily_path = test_vault .. '/daily',
+        })
+        local expected_path = resolve(test_vault) .. '/daily/2026/05/15-05-2026.md'
+
+        vault.toggle_diary('2026-05-15')
+
+        local buf = vim.api.nvim_get_current_buf()
+        vim.api.nvim_buf_set_lines(buf, 0, -1, false, { 'some diary content' })
+
+        vault.toggle_diary('2026-05-15')
+
+        assert.are.equal(-1, vim.fn.bufnr(expected_path))
+
+        local file = io.open(expected_path, 'r')
+        assert.truthy(file)
+        if file then
+            local content = file:read('*a')
+            file:close()
+            assert.are.equal('some diary content\n', content)
+        end
+    end)
+
+    it('toggles unchecked checkbox to checked', function()
+        vault.setup({
+            vault_path = test_vault,
+            todos_path = test_vault,
+        })
+        vault.toggle_todo()
+        local buf = vim.api.nvim_get_current_buf()
+        vim.api.nvim_buf_set_lines(buf, 0, -1, false, { '- [ ] item 1' })
+
+        vault.toggle_checkbox()
+
+        local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+        assert.are.equal('- [x] item 1', lines[1])
+    end)
+
+    it('toggles checked checkbox to unchecked', function()
+        vault.setup({
+            vault_path = test_vault,
+            todos_path = test_vault,
+        })
+        vault.toggle_todo()
+        local buf = vim.api.nvim_get_current_buf()
+        vim.api.nvim_buf_set_lines(buf, 0, -1, false, { '- [x] item 1' })
+
+        vault.toggle_checkbox()
+
+        local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+        assert.are.equal('- [ ] item 1', lines[1])
+    end)
+
+    it('adds checkbox to a line without checkbox', function()
+        vault.setup({
+            vault_path = test_vault,
+            todos_path = test_vault,
+        })
+        vault.toggle_todo()
+        local buf = vim.api.nvim_get_current_buf()
+        vim.api.nvim_buf_set_lines(buf, 0, -1, false, { 'some task' })
+
+        vault.toggle_checkbox()
+
+        local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+        assert.are.equal('- [ ] some task', lines[1])
+    end)
+
+    it('does nothing if current buffer is not todos.md', function()
+        vault.setup({
+            vault_path = test_vault,
+            todos_path = test_vault,
+        })
+        local buf = vim.api.nvim_create_buf(true, false)
+        vim.api.nvim_buf_set_name(buf, test_vault .. '/other.md')
+        vim.api.nvim_set_current_buf(buf)
+        vim.api.nvim_buf_set_lines(buf, 0, -1, false, { 'some line' })
+
+        vault.toggle_checkbox()
+
+        local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+        assert.are.equal('some line', lines[1])
+    end)
 end)

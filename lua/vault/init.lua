@@ -59,7 +59,16 @@ M.toggle_diary = function(date_str)
             t = os.time({ year = tonumber(y), month = tonumber(m), day = tonumber(d) })
         end
     end
-    open_or_close(daily_root .. os.date('/%Y/%m/%d-%m-%Y.md', t))
+    local date_table = os.date('*t', t)
+    local path = string.format(
+        '/%04d/%02d/%02d-%02d-%04d.md',
+        date_table.year,
+        date_table.month,
+        date_table.day,
+        date_table.month,
+        date_table.year
+    )
+    open_or_close(daily_root .. path)
 end
 
 M.toggle_checkbox = function()
