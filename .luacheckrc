@@ -1,4 +1,8 @@
-std = "lua51"
+std = 'lua51'
 globals = {
-    "vim",
+    'vim',
+}
+
+files['tests/*'] = {
+    globals = { 'os' },
 }
