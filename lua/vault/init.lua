@@ -204,6 +204,15 @@ M.diary_prev_day = function()
     navigate_diary(-1)
 end
 
+M.diary_goto = function()
+    local default = get_current_diary_date_str() or os.date('%Y-%m-%d', os.time())
+    vim.ui.input({ prompt = 'Diary date (YYYY-MM-DD): ', default = default }, function(input)
+        if input then
+            M.toggle_diary(input)
+        end
+    end)
+end
+
 M.toggle_checkbox = function()
     if not vim.api.nvim_buf_get_name(0):match('todos%.md$') then
         return
@@ -252,6 +261,7 @@ M.setup = function(opts)
     end, { force = true, nargs = '?' })
     vim.api.nvim_create_user_command('VaultDiaryNext', M.diary_next_day, { force = true })
     vim.api.nvim_create_user_command('VaultDiaryPrev', M.diary_prev_day, { force = true })
+    vim.api.nvim_create_user_command('VaultDiaryGoto', M.diary_goto, { force = true })
 
     local keys = vim.tbl_extend('force', {
         toggle_todo = '<leader>vt',
@@ -259,6 +269,7 @@ M.setup = function(opts)
         toggle_diary = '<leader>vd',
         diary_next = '<leader>vn',
         diary_prev = '<leader>vp',
+        diary_goto = '<leader>vg',
     }, opts.keys or {})
 
     if keys.toggle_todo then
@@ -275,6 +286,10 @@ M.setup = function(opts)
 
     if keys.diary_prev then
         vim.keymap.set('n', keys.diary_prev, M.diary_prev_day, { noremap = true, desc = 'Go to previous diary day' })
+    end
+
+    if keys.diary_goto then
+        vim.keymap.set('n', keys.diary_goto, M.diary_goto, { noremap = true, desc = 'Go to a diary date' })
     end
 
     if keys.toggle_checkbox then

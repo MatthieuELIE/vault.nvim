@@ -633,6 +633,91 @@ describe('vault', function()
         assert.truthy(notifications[1].msg:match('could not save'))
     end)
 
+    it('opens the entered date when confirming the diary goto prompt', function()
+        vault.setup({
+            vault_path = test_vault,
+            daily_path = test_vault .. '/daily',
+        })
+        local expected_path = resolve(test_vault) .. '/daily/2026/05/15-05-2026.md'
+        local original_input = vim.ui.input
+        vim.ui.input = function(_, on_confirm) ---@diagnostic disable-line: duplicate-set-field
+            on_confirm('2026-05-15')
+        end
+
+        vault.diary_goto()
+
+        vim.ui.input = original_input
+
+        local current_buf = vim.api.nvim_get_current_buf()
+        assert.are.equal(expected_path, resolve(vim.api.nvim_buf_get_name(current_buf)))
+    end)
+
+    it('does nothing when the diary goto prompt is cancelled', function()
+        vault.setup({
+            vault_path = test_vault,
+            daily_path = test_vault .. '/daily',
+        })
+        local original_input = vim.ui.input
+        vim.ui.input = function(_, on_confirm) ---@diagnostic disable-line: duplicate-set-field
+            on_confirm(nil)
+        end
+        local buf_count_before = #vim.api.nvim_list_bufs()
+
+        vault.diary_goto()
+
+        vim.ui.input = original_input
+
+        assert.are.equal(buf_count_before, #vim.api.nvim_list_bufs())
+    end)
+
+    it('defaults the diary goto prompt to the current diary buffer date', function()
+        vault.setup({
+            vault_path = test_vault,
+            daily_path = test_vault .. '/daily',
+        })
+        vault.toggle_diary('2026-05-15')
+        local captured_default
+        local original_input = vim.ui.input
+        vim.ui.input = function(input_opts, on_confirm) ---@diagnostic disable-line: duplicate-set-field
+            captured_default = input_opts.default
+            on_confirm(nil)
+        end
+
+        vault.diary_goto()
+
+        vim.ui.input = original_input
+
+        assert.are.equal('2026-05-15', captured_default)
+    end)
+
+    it("defaults the diary goto prompt to today's date when not in a diary buffer", function()
+        vault.setup({
+            vault_path = test_vault,
+            daily_path = test_vault .. '/daily',
+        })
+        local original_os_time = os.time
+        local fixed_now = original_os_time({ year = 2025, month = 12, day = 25, hour = 12 })
+        os.time = function(t) ---@diagnostic disable-line: duplicate-set-field
+            if t == nil then
+                return fixed_now
+            end
+            return original_os_time(t)
+        end
+        local captured_default
+        local original_input = vim.ui.input
+        vim.ui.input = function(input_opts, on_confirm) ---@diagnostic disable-line: duplicate-set-field
+            captured_default = input_opts.default
+            on_confirm(nil)
+        end
+
+        vault.diary_goto()
+
+        os.time = original_os_time
+        vim.ui.input = original_input
+
+        assert.are.equal('2025-12-25', captured_default)
+    end)
+
     it('toggles unchecked checkbox to checked', function()
         vault.setup({
             vault_path = test_vault,
