@@ -153,6 +153,115 @@ describe('vault', function()
         assert.are.equal(vim.log.levels.WARN, notifications[1].level)
     end)
 
+    it('copies todo template content into a newly created todos.md', function()
+        local templates_dir = test_vault .. '/Templates'
+        vim.fn.mkdir(templates_dir, 'p')
+        local f = io.open(templates_dir .. '/Todo Template.md', 'w')
+        f:write('---\ntype: todo\n---\n\n## Tasks\n')
+        f:close()
+
+        vault.setup({
+            vault_path = test_vault,
+            todos_path = test_vault,
+            templates_path = templates_dir,
+        })
+
+        vault.toggle_todo()
+
+        local buf = vim.api.nvim_get_current_buf()
+        local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+
+        assert.are.same({ '---', 'type: todo', '---', '', '## Tasks' }, lines)
+    end)
+
+    it('copies daily template content into a newly created diary note', function()
+        local templates_dir = test_vault .. '/Templates'
+        vim.fn.mkdir(templates_dir, 'p')
+        local f = io.open(templates_dir .. '/Daily Note Template.md', 'w')
+        f:write('# Daily\n\n![[Daily.base]]\n')
+        f:close()
+
+        vault.setup({
+            vault_path = test_vault,
+            daily_path = test_vault .. '/daily',
+            templates_path = templates_dir,
+        })
+
+        vault.toggle_diary('2026-05-15')
+
+        local buf = vim.api.nvim_get_current_buf()
+        local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+
+        assert.are.same({ '# Daily', '', '![[Daily.base]]' }, lines)
+    end)
+
+    it('creates an empty todos.md when templates_path is set but the template file is missing', function()
+        local templates_dir = test_vault .. '/Templates'
+        vim.fn.mkdir(templates_dir, 'p')
+
+        vault.setup({
+            vault_path = test_vault,
+            todos_path = test_vault,
+            templates_path = templates_dir,
+        })
+
+        vault.toggle_todo()
+
+        local buf = vim.api.nvim_get_current_buf()
+        local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+
+        assert.are.same({ '' }, lines)
+        assert.are.equal(0, #notifications)
+    end)
+
+    it('does not re-apply the template to an already existing todos.md', function()
+        local templates_dir = test_vault .. '/Templates'
+        vim.fn.mkdir(templates_dir, 'p')
+        local f = io.open(templates_dir .. '/Todo Template.md', 'w')
+        f:write('## Tasks\n')
+        f:close()
+
+        vault.setup({
+            vault_path = test_vault,
+            todos_path = test_vault,
+            templates_path = templates_dir,
+        })
+        local expected_path = resolve(test_vault) .. '/' .. vault.get_project_root() .. '/todos.md'
+        vim.fn.mkdir(vim.fn.fnamemodify(expected_path, ':h'), 'p')
+        local existing = io.open(expected_path, 'w')
+        existing:write('pre-existing content\n')
+        existing:close()
+
+        vault.toggle_todo()
+
+        local buf = vim.api.nvim_get_current_buf()
+        local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+
+        assert.are.same({ 'pre-existing content' }, lines)
+    end)
+
+    it('applies an overridden template filename set via opts.templates', function()
+        local templates_dir = test_vault .. '/Templates'
+        vim.fn.mkdir(templates_dir, 'p')
+        local f = io.open(templates_dir .. '/My Todo.md', 'w')
+        f:write('## Custom\n')
+        f:close()
+
+        vault.setup({
+            vault_path = test_vault,
+            todos_path = test_vault,
+            templates_path = templates_dir,
+            templates = { todos = 'My Todo.md' },
+        })
+
+        vault.toggle_todo()
+
+        local buf = vim.api.nvim_get_current_buf()
+        local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+
+        assert.are.same({ '## Custom' }, lines)
+    end)
+
     it('does not warn when VAULT_PATH env var is unset', function()
         local original_env = vim.env.VAULT_PATH
         vim.env.VAULT_PATH = nil
