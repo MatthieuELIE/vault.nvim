@@ -1,6 +1,25 @@
 local M = {}
 
-local vault = vim.fn.expand(vim.env.VAULT_PATH or '~/vault')
+local DEFAULT_VAULT_PATH = '~/vault'
+
+local function resolve_vault_path(path, source)
+    if path == nil then
+        return vim.fn.expand(DEFAULT_VAULT_PATH)
+    end
+
+    local expanded = path ~= '' and vim.fn.expand(path) or ''
+    if expanded ~= '' then
+        return expanded
+    end
+
+    vim.notify(
+        string.format("vault.nvim: %s is empty or invalid, falling back to '%s'", source, DEFAULT_VAULT_PATH),
+        vim.log.levels.ERROR
+    )
+    return vim.fn.expand(DEFAULT_VAULT_PATH)
+end
+
+local vault = resolve_vault_path(vim.env.VAULT_PATH, 'VAULT_PATH')
 local split_cmd = 'vsplit'
 local todos_root = vault
 local daily_root = vault .. '/daily'
@@ -92,7 +111,7 @@ end
 M.setup = function(opts)
     opts = opts or {}
     if opts.vault_path then
-        vault = vim.fn.expand(opts.vault_path)
+        vault = resolve_vault_path(opts.vault_path, 'vault_path')
     end
     if opts.split then
         split_cmd = opts.split

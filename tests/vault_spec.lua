@@ -88,6 +88,24 @@ describe('vault', function()
         assert.are.equal(-1, vim.fn.bufnr(expected_path))
     end)
 
+    it('does not warn when VAULT_PATH env var is unset', function()
+        local original_env = vim.env.VAULT_PATH
+        vim.env.VAULT_PATH = nil
+        package.loaded['vault'] = nil
+        require('vault')
+        vim.env.VAULT_PATH = original_env
+
+        assert.are.equal(0, #notifications)
+    end)
+
+    it('falls back to default vault path and warns when setup is called with an empty vault_path', function()
+        vault.setup({ vault_path = '' })
+
+        assert.are.equal(1, #notifications)
+        assert.are.equal(vim.log.levels.ERROR, notifications[1].level)
+        assert.truthy(notifications[1].msg:match('vault_path'))
+    end)
+
     it('aborts deletion and warns if buffer cannot be saved', function()
         vault.setup({
             vault_path = test_vault,
