@@ -114,15 +114,15 @@ M.toggle_todo = function()
 end
 
 local function parse_date(date_str)
-    local y, m, d = date_str:match('^(%d%d%d%d)-(%d%d)-(%d%d)$')
-    if not y then
+    local year, month, day = date_str:match('^(%d%d%d%d)-(%d%d)-(%d%d)$')
+    if not year then
         return nil
     end
-    return os.time({ year = tonumber(y), month = tonumber(m), day = tonumber(d) })
+    return os.time({ year = tonumber(year), month = tonumber(month), day = tonumber(day) })
 end
 
-local function diary_path(t)
-    local date_table = os.date('*t', t)
+local function diary_path(time)
+    local date_table = os.date('*t', time)
     return state.daily_root
         .. string.format(
             '/%04d/%02d/%02d-%02d-%04d.md',
@@ -135,20 +135,20 @@ local function diary_path(t)
 end
 
 M.toggle_diary = function(date_str)
-    local t = os.time()
+    local time = os.time()
     if date_str and date_str ~= '' then
-        t = parse_date(date_str) or t
+        time = parse_date(date_str) or time
     end
-    open_or_close(diary_path(t), 'daily')
+    open_or_close(diary_path(time), 'daily')
 end
 
 local function get_current_diary_date_str()
     local name = vim.api.nvim_buf_get_name(0)
-    local d, m, y = name:match('(%d%d)%-(%d%d)%-(%d%d%d%d)%.md$')
-    if not d then
+    local day, month, year = name:match('(%d%d)%-(%d%d)%-(%d%d%d%d)%.md$')
+    if not day then
         return nil
     end
-    return string.format('%s-%s-%s', y, m, d)
+    return string.format('%s-%s-%s', year, month, day)
 end
 
 local function navigate_diary(offset_days)

@@ -431,17 +431,17 @@ describe('vault', function()
 
         vault.diary_next_day()
 
-        assert.are.equal(-1, vim.fn.bufnr(previous_path))
         local current_buf = vim.api.nvim_get_current_buf()
-        assert.are.equal(next_path, resolve(vim.api.nvim_buf_get_name(current_buf)))
-
         local file = io.open(previous_path, 'r')
-        assert.truthy(file)
+        local content = file and file:read('*a')
         if file then
-            local content = file:read('*a')
             file:close()
-            assert.are.equal('some diary content\n', content)
         end
+
+        assert.are.equal(-1, vim.fn.bufnr(previous_path))
+        assert.are.equal(next_path, resolve(vim.api.nvim_buf_get_name(current_buf)))
+        assert.truthy(file)
+        assert.are.equal('some diary content\n', content)
     end)
 
     it('moves to the previous day diary from within a diary buffer, across a month/year boundary', function()
