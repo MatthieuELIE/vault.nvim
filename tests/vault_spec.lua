@@ -417,6 +417,130 @@ describe('vault', function()
         end
     end)
 
+    it('moves to the next day diary from within a diary buffer', function()
+        vault.setup({
+            vault_path = test_vault,
+            daily_path = test_vault .. '/daily',
+        })
+        local previous_path = resolve(test_vault) .. '/daily/2026/05/15-05-2026.md'
+        local next_path = resolve(test_vault) .. '/daily/2026/05/16-05-2026.md'
+
+        vault.toggle_diary('2026-05-15')
+        local buf = vim.api.nvim_get_current_buf()
+        vim.api.nvim_buf_set_lines(buf, 0, -1, false, { 'some diary content' })
+
+        vault.diary_next_day()
+
+        local current_buf = vim.api.nvim_get_current_buf()
+        local file = io.open(previous_path, 'r')
+        local content = file and file:read('*a')
+        if file then
+            file:close()
+        end
+
+        assert.are.equal(-1, vim.fn.bufnr(previous_path))
+        assert.are.equal(next_path, resolve(vim.api.nvim_buf_get_name(current_buf)))
+        assert.truthy(file)
+        assert.are.equal('some diary content\n', content)
+    end)
+
+    it('moves to the previous day diary from within a diary buffer, across a month/year boundary', function()
+        vault.setup({
+            vault_path = test_vault,
+            daily_path = test_vault .. '/daily',
+        })
+        local current_path = resolve(test_vault) .. '/daily/2026/01/01-01-2026.md'
+        local previous_path = resolve(test_vault) .. '/daily/2025/12/31-12-2025.md'
+
+        vault.toggle_diary('2026-01-01')
+
+        vault.diary_prev_day()
+
+        assert.are.equal(-1, vim.fn.bufnr(current_path))
+        local current_buf = vim.api.nvim_get_current_buf()
+        assert.are.equal(previous_path, resolve(vim.api.nvim_buf_get_name(current_buf)))
+    end)
+
+    it('opens tomorrow diary via next-day navigation when not currently in a diary buffer', function()
+        vault.setup({
+            vault_path = test_vault,
+            daily_path = test_vault .. '/daily',
+        })
+        local original_os_time = os.time
+        local fixed_now = original_os_time({ year = 2025, month = 12, day = 25, hour = 12 })
+        os.time = function(t) ---@diagnostic disable-line: duplicate-set-field
+            if t == nil then
+                return fixed_now
+            end
+            return original_os_time(t)
+        end
+
+        vault.diary_next_day()
+
+        os.time = original_os_time
+
+        local expected_path = resolve(test_vault) .. '/daily/2025/12/26-12-2025.md'
+        local current_buf = vim.api.nvim_get_current_buf()
+        assert.are.equal(expected_path, resolve(vim.api.nvim_buf_get_name(current_buf)))
+    end)
+
+    it('opens yesterday diary via prev-day navigation when not currently in a diary buffer', function()
+        vault.setup({
+            vault_path = test_vault,
+            daily_path = test_vault .. '/daily',
+        })
+        local original_os_time = os.time
+        local fixed_now = original_os_time({ year = 2025, month = 12, day = 25, hour = 12 })
+        os.time = function(t) ---@diagnostic disable-line: duplicate-set-field
+            if t == nil then
+                return fixed_now
+            end
+            return original_os_time(t)
+        end
+
+        vault.diary_prev_day()
+
+        os.time = original_os_time
+
+        local expected_path = resolve(test_vault) .. '/daily/2025/12/24-12-2025.md'
+        local current_buf = vim.api.nvim_get_current_buf()
+        assert.are.equal(expected_path, resolve(vim.api.nvim_buf_get_name(current_buf)))
+    end)
+
+    it('aborts navigation and keeps the current diary open if it cannot be saved', function()
+        vault.setup({
+            vault_path = test_vault,
+            daily_path = test_vault .. '/daily',
+        })
+        local expected_path = resolve(test_vault) .. '/daily/2026/05/15-05-2026.md'
+        local next_path = resolve(test_vault) .. '/daily/2026/05/16-05-2026.md'
+
+        vault.toggle_diary('2026-05-15')
+
+        local buf = vim.api.nvim_get_current_buf()
+        vim.api.nvim_buf_set_lines(buf, 0, -1, false, { 'modified content' })
+        vim.bo[buf].modified = true
+
+        local original_write = vim.cmd
+        vim.cmd = function(cmd_str) ---@diagnostic disable-line: duplicate-set-field
+            if cmd_str == 'silent! write' then
+                return
+            else
+                original_write(cmd_str)
+            end
+        end
+
+        vault.diary_next_day()
+
+        vim.cmd = original_write
+
+        assert.is_true(vim.bo[buf].modified)
+        assert.not_equal(-1, vim.fn.bufnr(expected_path))
+        assert.are.equal(-1, vim.fn.bufnr(next_path))
+        assert.are.equal(1, #notifications)
+        assert.truthy(notifications[1].msg:match('could not save'))
+    end)
+
     it('toggles unchecked checkbox to checked', function()
         vault.setup({
             vault_path = test_vault,

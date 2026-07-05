@@ -6,6 +6,7 @@ A lightweight, project-specific task manager and diary plugin for Neovim.
 
 - Toggle project-specific Markdown TODO list.
 - Open today's diary note (`daily/YYYY/MM/YYYY-MM-DD.md`).
+- Navigate to the previous/next diary day.
 - Automatically handles directory creation based on git root or active project root.
 - Simple, indentation-aware checkbox toggler.
 
@@ -20,6 +21,8 @@ Using [lazy.nvim](https://github.com/folke/lazy.nvim):
         { '<leader>vt', '<cmd>VaultToggleTodo<CR>', desc = 'Toggle Vault Todo' },
         { '<leader>vc', '<cmd>VaultToggleCheckbox<CR>', desc = 'Toggle Vault Checkbox' },
         { '<leader>vd', '<cmd>VaultToggleDiary<CR>', desc = 'Toggle Vault Diary' },
+        { '<leader>vn', '<cmd>VaultDiaryNext<CR>', desc = 'Next Vault Diary Day' },
+        { '<leader>vp', '<cmd>VaultDiaryPrev<CR>', desc = 'Previous Vault Diary Day' },
     },
     opts = {}
 }
@@ -39,6 +42,8 @@ opts = {
         toggle_todo     = '<leader>vt',
         toggle_checkbox = '<leader>vc',
         toggle_diary    = '<leader>vd',
+        diary_next      = '<leader>vn',
+        diary_prev      = '<leader>vp',
     },
 }
 ```
