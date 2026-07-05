@@ -113,24 +113,66 @@ M.toggle_todo = function()
     open_or_close(state.todos_root .. '/' .. M.get_project_root() .. '/todos.md', 'todos')
 end
 
+local function parse_date(date_str)
+    local y, m, d = date_str:match('^(%d%d%d%d)-(%d%d)-(%d%d)$')
+    if not y then
+        return nil
+    end
+    return os.time({ year = tonumber(y), month = tonumber(m), day = tonumber(d) })
+end
+
+local function diary_path(t)
+    local date_table = os.date('*t', t)
+    return state.daily_root
+        .. string.format(
+            '/%04d/%02d/%02d-%02d-%04d.md',
+            date_table.year,
+            date_table.month,
+            date_table.day,
+            date_table.month,
+            date_table.year
+        )
+end
+
 M.toggle_diary = function(date_str)
     local t = os.time()
     if date_str and date_str ~= '' then
-        local y, m, d = date_str:match('^(%d%d%d%d)-(%d%d)-(%d%d)$')
-        if y then
-            t = os.time({ year = tonumber(y), month = tonumber(m), day = tonumber(d) })
+        t = parse_date(date_str) or t
+    end
+    open_or_close(diary_path(t), 'daily')
+end
+
+local function get_current_diary_date_str()
+    local name = vim.api.nvim_buf_get_name(0)
+    local d, m, y = name:match('(%d%d)%-(%d%d)%-(%d%d%d%d)%.md$')
+    if not d then
+        return nil
+    end
+    return string.format('%s-%s-%s', y, m, d)
+end
+
+local function navigate_diary(offset_days)
+    local current = get_current_diary_date_str()
+    local base_time = os.time()
+
+    if current then
+        base_time = parse_date(current)
+        local current_path = vim.fs.normalize(diary_path(base_time))
+        M.toggle_diary(current)
+        if vim.fn.bufnr(current_path) ~= -1 then
+            return
         end
     end
-    local date_table = os.date('*t', t)
-    local path = string.format(
-        '/%04d/%02d/%02d-%02d-%04d.md',
-        date_table.year,
-        date_table.month,
-        date_table.day,
-        date_table.month,
-        date_table.year
-    )
-    open_or_close(state.daily_root .. path, 'daily')
+
+    M.toggle_diary(os.date('%Y-%m-%d', base_time + offset_days * 86400))
+end
+
+M.diary_next_day = function()
+    navigate_diary(1)
+end
+
+M.diary_prev_day = function()
+    navigate_diary(-1)
 end
 
 M.toggle_checkbox = function()
@@ -179,11 +221,15 @@ M.setup = function(opts)
     vim.api.nvim_create_user_command('VaultToggleDiary', function(o)
         M.toggle_diary(o.args)
     end, { force = true, nargs = '?' })
+    vim.api.nvim_create_user_command('VaultDiaryNext', M.diary_next_day, { force = true })
+    vim.api.nvim_create_user_command('VaultDiaryPrev', M.diary_prev_day, { force = true })
 
     local keys = vim.tbl_extend('force', {
         toggle_todo = '<leader>vt',
         toggle_checkbox = '<leader>vc',
         toggle_diary = '<leader>vd',
+        diary_next = '<leader>vn',
+        diary_prev = '<leader>vp',
     }, opts.keys or {})
 
     if keys.toggle_todo then
@@ -192,6 +238,14 @@ M.setup = function(opts)
 
     if keys.toggle_diary then
         vim.keymap.set('n', keys.toggle_diary, M.toggle_diary, { noremap = true, desc = 'Toggle today diary' })
+    end
+
+    if keys.diary_next then
+        vim.keymap.set('n', keys.diary_next, M.diary_next_day, { noremap = true, desc = 'Go to next diary day' })
+    end
+
+    if keys.diary_prev then
+        vim.keymap.set('n', keys.diary_prev, M.diary_prev_day, { noremap = true, desc = 'Go to previous diary day' })
     end
 
     if keys.toggle_checkbox then
