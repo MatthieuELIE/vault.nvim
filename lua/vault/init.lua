@@ -19,12 +19,32 @@ local function resolve_vault_path(path, source)
     return vim.fn.expand(DEFAULT_VAULT_PATH)
 end
 
+local DEFAULT_TEMPLATE_FILENAMES = {
+    todos = 'Todo Template.md',
+    daily = 'Daily Note Template.md',
+}
+
 local state = {
     split_cmd = 'vsplit',
+    template_filenames = DEFAULT_TEMPLATE_FILENAMES,
 }
 state.vault = resolve_vault_path(vim.env.VAULT_PATH, 'VAULT_PATH')
 state.todos_root = state.vault
 state.daily_root = state.vault .. '/daily'
+
+local function apply_template(note_type)
+    local filename = note_type and state.template_filenames[note_type]
+    if not filename or not state.templates_path then
+        return
+    end
+
+    local template_path = state.templates_path .. '/' .. filename
+    if vim.fn.filereadable(template_path) == 0 then
+        return
+    end
+
+    vim.api.nvim_buf_set_lines(0, 0, -1, false, vim.fn.readfile(template_path))
+end
 
 M.get_project_root = function()
     local found = vim.fs.find('.git', { upward = true, path = vim.fn.getcwd() })[1]
@@ -42,7 +62,7 @@ M.get_project_root = function()
     return name
 end
 
-local function open_or_close(path)
+local function open_or_close(path, note_type)
     path = vim.fs.normalize(path)
     local bufnr = vim.fn.bufnr(path)
     if bufnr ~= -1 then
@@ -82,11 +102,16 @@ local function open_or_close(path)
             return
         end
     end
+
+    local is_new = vim.fn.filereadable(path) == 0
     vim.cmd(state.split_cmd .. ' ' .. vim.fn.fnameescape(path))
+    if is_new then
+        apply_template(note_type)
+    end
 end
 
 M.toggle_todo = function()
-    open_or_close(state.todos_root .. '/' .. M.get_project_root() .. '/todos.md')
+    open_or_close(state.todos_root .. '/' .. M.get_project_root() .. '/todos.md', 'todos')
 end
 
 M.toggle_diary = function(date_str)
@@ -106,7 +131,7 @@ M.toggle_diary = function(date_str)
         date_table.month,
         date_table.year
     )
-    open_or_close(state.daily_root .. path)
+    open_or_close(state.daily_root .. path, 'daily')
 end
 
 M.toggle_checkbox = function()
@@ -142,6 +167,12 @@ M.setup = function(opts)
     end
     if opts.daily_path then
         state.daily_root = vim.fn.expand(opts.daily_path)
+    end
+    if opts.templates_path then
+        state.templates_path = vim.fn.expand(opts.templates_path)
+    end
+    if opts.templates then
+        state.template_filenames = vim.tbl_extend('force', DEFAULT_TEMPLATE_FILENAMES, opts.templates)
     end
 
     vim.api.nvim_create_user_command('VaultToggleTodo', M.toggle_todo, { force = true })
