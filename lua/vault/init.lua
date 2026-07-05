@@ -77,9 +77,18 @@ local function open_or_close(path, note_type)
 
         local all_closed = true
         for _, win in ipairs(vim.fn.win_findbuf(bufnr)) do
-            local ok = pcall(vim.api.nvim_win_close, win, false)
-            if not ok then
-                all_closed = false
+            if #vim.api.nvim_list_wins() == 1 then
+                vim.api.nvim_win_call(win, function()
+                    vim.cmd('silent! buffer #')
+                    if vim.api.nvim_win_get_buf(win) == bufnr then
+                        vim.cmd('enew')
+                    end
+                end)
+            else
+                local ok = pcall(vim.api.nvim_win_close, win, false)
+                if not ok then
+                    all_closed = false
+                end
             end
         end
 
