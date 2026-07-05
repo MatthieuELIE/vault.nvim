@@ -103,9 +103,8 @@ local function open_or_close(path, note_type)
         end
     end
 
-    local is_new = vim.fn.filereadable(path) == 0
     vim.cmd(state.split_cmd .. ' ' .. vim.fn.fnameescape(path))
-    if is_new then
+    if vim.fn.filereadable(path) == 0 then
         apply_template(note_type)
     end
 end
