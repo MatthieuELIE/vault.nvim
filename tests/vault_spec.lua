@@ -102,6 +102,21 @@ describe('vault', function()
         assert.are.equal(-1, vim.fn.bufnr(expected_path))
     end)
 
+    it('warns and aborts when the parent directory cannot be created', function()
+        local blocking_file = test_vault .. '/blocked'
+        local f = io.open(blocking_file, 'w')
+        f:write('x')
+        f:close()
+
+        vault.setup({ vault_path = test_vault, todos_path = blocking_file })
+
+        vault.toggle_todo()
+
+        assert.are.equal(1, #notifications)
+        assert.are.equal(vim.log.levels.ERROR, notifications[1].level)
+        assert.truthy(notifications[1].msg:match('could not create directory'))
+    end)
+
     it('opens todo file for a project name with spaces and special characters', function()
         local original_cwd = vim.fn.getcwd()
         local special_project = test_vault .. '/code/proj with space #1 %2'

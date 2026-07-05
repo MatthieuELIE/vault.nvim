@@ -74,7 +74,14 @@ local function open_or_close(path)
         vim.api.nvim_buf_delete(bufnr, { force = true })
         return
     end
-    vim.fn.mkdir(vim.fn.fnamemodify(path, ':h'), 'p')
+    local parent = vim.fn.fnamemodify(path, ':h')
+    if vim.fn.isdirectory(parent) == 0 then
+        local ok, created = pcall(vim.fn.mkdir, parent, 'p')
+        if not ok or created == 0 then
+            vim.notify('vault.nvim: could not create directory ' .. parent, vim.log.levels.ERROR)
+            return
+        end
+    end
     vim.cmd(state.split_cmd .. ' ' .. vim.fn.fnameescape(path))
 end
 
