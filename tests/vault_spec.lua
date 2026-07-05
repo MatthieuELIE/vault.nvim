@@ -451,6 +451,63 @@ describe('vault', function()
         assert.are.equal('some diary content\n', content)
     end)
 
+    it('closes a different open diary note before opening a new date via toggle_diary', function()
+        vault.setup({
+            vault_path = test_vault,
+            daily_path = test_vault .. '/daily',
+        })
+        local previous_path = resolve(test_vault) .. '/daily/2026/05/15-05-2026.md'
+        local next_path = resolve(test_vault) .. '/daily/2026/05/16-05-2026.md'
+
+        vault.toggle_diary('2026-05-15')
+        local buf = vim.api.nvim_get_current_buf()
+        vim.api.nvim_buf_set_lines(buf, 0, -1, false, { 'some diary content' })
+
+        vault.toggle_diary('2026-05-16')
+
+        local current_buf = vim.api.nvim_get_current_buf()
+        local file = io.open(previous_path, 'r')
+        local content = file and file:read('*a')
+        if file then
+            file:close()
+        end
+
+        assert.are.equal(-1, vim.fn.bufnr(previous_path))
+        assert.are.equal(next_path, resolve(vim.api.nvim_buf_get_name(current_buf)))
+        assert.are.equal(2, #vim.api.nvim_list_wins())
+        assert.truthy(file)
+        assert.are.equal('some diary content\n', content)
+    end)
+
+    it('closes a different open diary note in a non-focused window before opening a new date', function()
+        vault.setup({
+            vault_path = test_vault,
+            daily_path = test_vault .. '/daily',
+        })
+        local previous_path = resolve(test_vault) .. '/daily/2026/05/15-05-2026.md'
+        local next_path = resolve(test_vault) .. '/daily/2026/05/16-05-2026.md'
+
+        vault.toggle_diary('2026-05-15')
+        local previous_buf = vim.api.nvim_get_current_buf()
+        vim.api.nvim_buf_set_lines(previous_buf, 0, -1, false, { 'some diary content' })
+        vim.cmd('vsplit')
+        vim.api.nvim_set_current_buf(vim.api.nvim_create_buf(true, false))
+
+        vault.toggle_diary('2026-05-16')
+
+        local current_buf = vim.api.nvim_get_current_buf()
+        local file = io.open(previous_path, 'r')
+        local content = file and file:read('*a')
+        if file then
+            file:close()
+        end
+
+        assert.are.equal(-1, vim.fn.bufnr(previous_path))
+        assert.are.equal(next_path, resolve(vim.api.nvim_buf_get_name(current_buf)))
+        assert.truthy(file)
+        assert.are.equal('some diary content\n', content)
+    end)
+
     it('moves to the next day diary from within a diary buffer', function()
         vault.setup({
             vault_path = test_vault,
