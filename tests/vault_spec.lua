@@ -99,16 +99,16 @@ describe('vault', function()
 
         vault.toggle_todo()
 
+        local file = io.open(expected_path, 'r')
+        local content = file and file:read('*a')
+        if file then
+            file:close()
+        end
+
         assert.are.equal(-1, vim.fn.bufnr(expected_path))
         assert.are.equal(0, #notifications)
-
-        local file = io.open(expected_path, 'r')
         assert.truthy(file)
-        if file then
-            local content = file:read('*a')
-            file:close()
-            assert.are.equal('some todo content\n', content)
-        end
+        assert.are.equal('some todo content\n', content)
     end)
 
     it('handles paths with percent and hash characters correctly', function()
