@@ -213,6 +213,64 @@ M.diary_goto = function()
     end)
 end
 
+local function todos_files()
+    local files = vim.fn.glob(state.todos_root .. '/*/todos.md', false, true)
+    table.sort(files)
+    return files
+end
+
+local function search_todos_fallback(query)
+    local items = {}
+    for _, path in ipairs(todos_files()) do
+        local lnum = 0
+        for line in io.lines(path) do
+            lnum = lnum + 1
+            if line:lower():find(query:lower(), 1, true) then
+                table.insert(items, { filename = path, lnum = lnum, text = line })
+            end
+        end
+    end
+
+    vim.fn.setqflist({}, ' ', { title = 'Vault todos: ' .. query, items = items })
+    vim.cmd('copen')
+end
+
+M.search_todos = function(query)
+    local function run(resolved_query)
+        if not resolved_query or resolved_query == '' then
+            return
+        end
+
+        local ok_telescope, telescope_builtin = pcall(require, 'telescope.builtin')
+        if ok_telescope then
+            telescope_builtin.live_grep({
+                search_dirs = { state.todos_root },
+                glob_pattern = '*todos.md',
+                default_text = resolved_query,
+            })
+            return
+        end
+
+        local ok_fzf, fzf_lua = pcall(require, 'fzf-lua')
+        if ok_fzf then
+            fzf_lua.live_grep({
+                cwd = state.todos_root,
+                search = resolved_query,
+                rg_opts = "--column --line-number --no-heading --color=always --smart-case -g '*todos.md'",
+            })
+            return
+        end
+
+        search_todos_fallback(resolved_query)
+    end
+
+    if query and query ~= '' then
+        run(query)
+    else
+        vim.ui.input({ prompt = 'Search todos: ' }, run)
+    end
+end
+
 M.toggle_checkbox = function()
     if not vim.api.nvim_buf_get_name(0):match('todos%.md$') then
         return
@@ -262,6 +320,9 @@ M.setup = function(opts)
     vim.api.nvim_create_user_command('VaultDiaryNext', M.diary_next_day, { force = true })
     vim.api.nvim_create_user_command('VaultDiaryPrev', M.diary_prev_day, { force = true })
     vim.api.nvim_create_user_command('VaultDiaryGoto', M.diary_goto, { force = true })
+    vim.api.nvim_create_user_command('VaultSearchTodos', function(o)
+        M.search_todos(o.args)
+    end, { force = true, nargs = '?' })
 
     local keys = vim.tbl_extend('force', {
         toggle_todo = '<leader>vt',
@@ -270,6 +331,7 @@ M.setup = function(opts)
         diary_next = '<leader>vn',
         diary_prev = '<leader>vp',
         diary_goto = '<leader>vg',
+        search_todos = '<leader>vs',
     }, opts.keys or {})
 
     if keys.toggle_todo then
@@ -290,6 +352,15 @@ M.setup = function(opts)
 
     if keys.diary_goto then
         vim.keymap.set('n', keys.diary_goto, M.diary_goto, { noremap = true, desc = 'Go to a diary date' })
+    end
+
+    if keys.search_todos then
+        vim.keymap.set(
+            'n',
+            keys.search_todos,
+            M.search_todos,
+            { noremap = true, desc = 'Search todos across projects' }
+        )
     end
 
     if keys.toggle_checkbox then

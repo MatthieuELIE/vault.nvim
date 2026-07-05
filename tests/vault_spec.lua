@@ -763,6 +763,77 @@ describe('vault', function()
         assert.are.equal('- [ ] some task', lines[1])
     end)
 
+    it('populates the quickfix list with matches across projects todos.md files', function()
+        vault.setup({
+            vault_path = test_vault,
+            todos_path = test_vault,
+        })
+        vim.fn.mkdir(test_vault .. '/proj-a', 'p')
+        local file_a = io.open(test_vault .. '/proj-a/todos.md', 'w')
+        file_a:write('- [ ] buy milk\n- [ ] call bob\n')
+        file_a:close()
+        vim.fn.mkdir(test_vault .. '/proj-b', 'p')
+        local file_b = io.open(test_vault .. '/proj-b/todos.md', 'w')
+        file_b:write('- [ ] fix bug\n- [ ] Buy bread\n')
+        file_b:close()
+        local original_input = vim.ui.input
+        vim.ui.input = function(_, on_confirm) ---@diagnostic disable-line: duplicate-set-field
+            on_confirm('buy')
+        end
+
+        vault.search_todos()
+
+        vim.ui.input = original_input
+        local qflist = vim.fn.getqflist()
+
+        assert.are.equal(2, #qflist)
+        assert.truthy(vim.api.nvim_buf_get_name(qflist[1].bufnr):match('proj%-a/todos%.md$'))
+        assert.are.equal(1, qflist[1].lnum)
+        assert.are.equal('- [ ] buy milk', qflist[1].text)
+        assert.truthy(vim.api.nvim_buf_get_name(qflist[2].bufnr):match('proj%-b/todos%.md$'))
+        assert.are.equal(2, qflist[2].lnum)
+        assert.are.equal('- [ ] Buy bread', qflist[2].text)
+    end)
+
+    it('produces an empty quickfix list when the search query has no matches', function()
+        vault.setup({
+            vault_path = test_vault,
+            todos_path = test_vault,
+        })
+        vim.fn.mkdir(test_vault .. '/proj-a', 'p')
+        local file_a = io.open(test_vault .. '/proj-a/todos.md', 'w')
+        file_a:write('- [ ] buy milk\n')
+        file_a:close()
+        local original_input = vim.ui.input
+        vim.ui.input = function(_, on_confirm) ---@diagnostic disable-line: duplicate-set-field
+            on_confirm('nonexistent')
+        end
+
+        vault.search_todos()
+
+        vim.ui.input = original_input
+
+        assert.are.equal(0, #vim.fn.getqflist())
+    end)
+
+    it('does nothing when the search todos prompt is cancelled', function()
+        vault.setup({
+            vault_path = test_vault,
+            todos_path = test_vault,
+        })
+        local qflist_count_before = vim.fn.getqflist({ nr = '$' }).nr
+        local original_input = vim.ui.input
+        vim.ui.input = function(_, on_confirm) ---@diagnostic disable-line: duplicate-set-field
+            on_confirm(nil)
+        end
+
+        vault.search_todos()
+
+        vim.ui.input = original_input
+
+        assert.are.equal(qflist_count_before, vim.fn.getqflist({ nr = '$' }).nr)
+    end)
+
     it('does nothing if current buffer is not todos.md', function()
         vault.setup({
             vault_path = test_vault,
