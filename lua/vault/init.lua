@@ -27,7 +27,17 @@ local daily_root = vault .. '/daily'
 M.get_project_root = function()
     local found = vim.fs.find('.git', { upward = true, path = vim.fn.getcwd() })[1]
     local root = found and vim.fs.dirname(found) or vim.fn.getcwd()
-    return vim.fn.fnamemodify(root, ':t')
+    local name = vim.fn.fnamemodify(root, ':t')
+
+    if name == '' then
+        vim.notify(
+            "vault.nvim: could not determine a project name from '" .. root .. "', using 'root'",
+            vim.log.levels.WARN
+        )
+        return 'root'
+    end
+
+    return name
 end
 
 local function open_or_close(path)

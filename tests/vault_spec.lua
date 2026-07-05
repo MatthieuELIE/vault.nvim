@@ -88,6 +88,42 @@ describe('vault', function()
         assert.are.equal(-1, vim.fn.bufnr(expected_path))
     end)
 
+    it('opens todo file for a project name with spaces and special characters', function()
+        local original_cwd = vim.fn.getcwd()
+        local special_project = test_vault .. '/code/proj with space #1 %2'
+        vim.fn.mkdir(special_project .. '/.git', 'p')
+        vim.fn.chdir(special_project)
+
+        vault.setup({
+            vault_path = test_vault,
+            todos_path = test_vault,
+        })
+        local expected_path = resolve(test_vault) .. '/' .. vault.get_project_root() .. '/todos.md'
+
+        vault.toggle_todo()
+
+        local buf = vim.api.nvim_get_current_buf()
+        assert.are.equal(expected_path, resolve(vim.api.nvim_buf_get_name(buf)))
+
+        vault.toggle_todo()
+        vim.fn.chdir(original_cwd)
+
+        assert.are.equal(-1, vim.fn.bufnr(expected_path))
+    end)
+
+    it('falls back to a safe project name and warns when project root name is empty', function()
+        local original_cwd = vim.fn.getcwd()
+        vim.fn.chdir('/')
+
+        local name = vault.get_project_root()
+
+        vim.fn.chdir(original_cwd)
+
+        assert.are.equal('root', name)
+        assert.are.equal(1, #notifications)
+        assert.are.equal(vim.log.levels.WARN, notifications[1].level)
+    end)
+
     it('does not warn when VAULT_PATH env var is unset', function()
         local original_env = vim.env.VAULT_PATH
         vim.env.VAULT_PATH = nil
