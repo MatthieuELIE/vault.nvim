@@ -35,12 +35,14 @@ describe('vault', function()
             todos_path = test_vault,
         })
         local expected_path = resolve(test_vault) .. '/' .. vault.get_project_root() .. '/todos.md'
-        assert.is_nil(vim.api.nvim_buf_get_name(0):match('todos%.md$'))
+        local initial_buf_name = vim.api.nvim_buf_get_name(0)
 
         vault.toggle_todo()
 
         local current_buf = vim.api.nvim_get_current_buf()
         local buf_name = vim.api.nvim_buf_get_name(current_buf)
+
+        assert.is_nil(initial_buf_name:match('todos%.md$'))
         assert.are.equal(expected_path, resolve(buf_name))
     end)
 
@@ -48,13 +50,15 @@ describe('vault', function()
         vault.setup({ vault_path = test_vault })
 
         local expected_todos_path = resolve(test_vault) .. '/' .. vault.get_project_root() .. '/todos.md'
+        local expected_diary_path = resolve(test_vault) .. '/daily/2026/05/15-05-2026.md'
+
         vault.toggle_todo()
         local todos_buf_name = vim.api.nvim_buf_get_name(vim.api.nvim_get_current_buf())
-        assert.are.equal(expected_todos_path, resolve(todos_buf_name))
 
         vault.toggle_diary('2026-05-15')
-        local expected_diary_path = resolve(test_vault) .. '/daily/2026/05/15-05-2026.md'
         local diary_buf_name = vim.api.nvim_buf_get_name(vim.api.nvim_get_current_buf())
+
+        assert.are.equal(expected_todos_path, resolve(todos_buf_name))
         assert.are.equal(expected_diary_path, resolve(diary_buf_name))
     end)
 
@@ -72,15 +76,15 @@ describe('vault', function()
 
         vault.toggle_todo()
 
-        assert.are.equal(-1, vim.fn.bufnr(expected_path))
-
         local file = io.open(expected_path, 'r')
-        assert.truthy(file)
+        local content = file and file:read('*a')
         if file then
-            local content = file:read('*a')
             file:close()
-            assert.are.equal('some todo content\n', content)
         end
+
+        assert.are.equal(-1, vim.fn.bufnr(expected_path))
+        assert.truthy(file)
+        assert.are.equal('some todo content\n', content)
     end)
 
     it("closes todo buffer opened via split = 'edit' when it is the only window", function()
@@ -123,10 +127,11 @@ describe('vault', function()
         vault.toggle_todo()
 
         local buf = vim.api.nvim_get_current_buf()
-        assert.are.equal(expected_path, resolve(vim.api.nvim_buf_get_name(buf)))
+        local buf_name = resolve(vim.api.nvim_buf_get_name(buf))
 
         vault.toggle_todo()
 
+        assert.are.equal(expected_path, buf_name)
         assert.are.equal(-1, vim.fn.bufnr(expected_path))
     end)
 
@@ -160,11 +165,12 @@ describe('vault', function()
         vault.toggle_todo()
 
         local buf = vim.api.nvim_get_current_buf()
-        assert.are.equal(expected_path, resolve(vim.api.nvim_buf_get_name(buf)))
+        local buf_name = resolve(vim.api.nvim_buf_get_name(buf))
 
         vault.toggle_todo()
         vim.fn.chdir(original_cwd)
 
+        assert.are.equal(expected_path, buf_name)
         assert.are.equal(-1, vim.fn.bufnr(expected_path))
     end)
 
@@ -434,15 +440,15 @@ describe('vault', function()
 
         vault.toggle_diary('2026-05-15')
 
-        assert.are.equal(-1, vim.fn.bufnr(expected_path))
-
         local file = io.open(expected_path, 'r')
-        assert.truthy(file)
+        local content = file and file:read('*a')
         if file then
-            local content = file:read('*a')
             file:close()
-            assert.are.equal('some diary content\n', content)
         end
+
+        assert.are.equal(-1, vim.fn.bufnr(expected_path))
+        assert.truthy(file)
+        assert.are.equal('some diary content\n', content)
     end)
 
     it('moves to the next day diary from within a diary buffer', function()
@@ -484,8 +490,9 @@ describe('vault', function()
 
         vault.diary_prev_day()
 
-        assert.are.equal(-1, vim.fn.bufnr(current_path))
         local current_buf = vim.api.nvim_get_current_buf()
+
+        assert.are.equal(-1, vim.fn.bufnr(current_path))
         assert.are.equal(previous_path, resolve(vim.api.nvim_buf_get_name(current_buf)))
     end)
 
