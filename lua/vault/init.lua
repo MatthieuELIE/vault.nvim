@@ -19,10 +19,12 @@ local function resolve_vault_path(path, source)
     return vim.fn.expand(DEFAULT_VAULT_PATH)
 end
 
-local vault = resolve_vault_path(vim.env.VAULT_PATH, 'VAULT_PATH')
-local split_cmd = 'vsplit'
-local todos_root = vault
-local daily_root = vault .. '/daily'
+local state = {
+    split_cmd = 'vsplit',
+}
+state.vault = resolve_vault_path(vim.env.VAULT_PATH, 'VAULT_PATH')
+state.todos_root = state.vault
+state.daily_root = state.vault .. '/daily'
 
 M.get_project_root = function()
     local found = vim.fs.find('.git', { upward = true, path = vim.fn.getcwd() })[1]
@@ -73,11 +75,11 @@ local function open_or_close(path)
         return
     end
     vim.fn.mkdir(vim.fn.fnamemodify(path, ':h'), 'p')
-    vim.cmd(split_cmd .. ' ' .. vim.fn.fnameescape(path))
+    vim.cmd(state.split_cmd .. ' ' .. vim.fn.fnameescape(path))
 end
 
 M.toggle_todo = function()
-    open_or_close(todos_root .. '/' .. M.get_project_root() .. '/todos.md')
+    open_or_close(state.todos_root .. '/' .. M.get_project_root() .. '/todos.md')
 end
 
 M.toggle_diary = function(date_str)
@@ -97,7 +99,7 @@ M.toggle_diary = function(date_str)
         date_table.month,
         date_table.year
     )
-    open_or_close(daily_root .. path)
+    open_or_close(state.daily_root .. path)
 end
 
 M.toggle_checkbox = function()
@@ -107,10 +109,10 @@ M.toggle_checkbox = function()
 
     local line = vim.api.nvim_get_current_line()
     local indent, content = line:match('^(%s*)(.*)')
-    local state, rest = content:match('^%- %[([ x])%](.*)')
+    local checkbox_state, rest = content:match('^%- %[([ x])%](.*)')
 
-    if state then
-        local new_state = state == 'x' and ' ' or 'x'
+    if checkbox_state then
+        local new_state = checkbox_state == 'x' and ' ' or 'x'
         local new_line = string.format('%s- [%s]%s', indent, new_state, rest)
         vim.api.nvim_set_current_line(new_line)
     else
@@ -121,16 +123,18 @@ end
 M.setup = function(opts)
     opts = opts or {}
     if opts.vault_path then
-        vault = resolve_vault_path(opts.vault_path, 'vault_path')
+        state.vault = resolve_vault_path(opts.vault_path, 'vault_path')
+        state.todos_root = state.vault
+        state.daily_root = state.vault .. '/daily'
     end
     if opts.split then
-        split_cmd = opts.split
+        state.split_cmd = opts.split
     end
     if opts.todos_path then
-        todos_root = vim.fn.expand(opts.todos_path)
+        state.todos_root = vim.fn.expand(opts.todos_path)
     end
     if opts.daily_path then
-        daily_root = vim.fn.expand(opts.daily_path)
+        state.daily_root = vim.fn.expand(opts.daily_path)
     end
 
     vim.api.nvim_create_user_command('VaultToggleTodo', M.toggle_todo, { force = true })
@@ -155,7 +159,7 @@ M.setup = function(opts)
 
     if keys.toggle_checkbox then
         vim.api.nvim_create_autocmd('BufEnter', {
-            pattern = vault .. '/*/todos.md',
+            pattern = state.vault .. '/*/todos.md',
             callback = function(args)
                 vim.keymap.set(
                     'n',

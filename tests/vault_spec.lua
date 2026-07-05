@@ -44,6 +44,20 @@ describe('vault', function()
         assert.are.equal(expected_path, resolve(buf_name))
     end)
 
+    it('derives todos_root and daily_root from vault_path when they are not set explicitly', function()
+        vault.setup({ vault_path = test_vault })
+
+        local expected_todos_path = resolve(test_vault) .. '/' .. vault.get_project_root() .. '/todos.md'
+        vault.toggle_todo()
+        local todos_buf_name = vim.api.nvim_buf_get_name(vim.api.nvim_get_current_buf())
+        assert.are.equal(expected_todos_path, resolve(todos_buf_name))
+
+        vault.toggle_diary('2026-05-15')
+        local expected_diary_path = resolve(test_vault) .. '/daily/2026/05/15-05-2026.md'
+        local diary_buf_name = vim.api.nvim_buf_get_name(vim.api.nvim_get_current_buf())
+        assert.are.equal(expected_diary_path, resolve(diary_buf_name))
+    end)
+
     it('closes todo buffer when already open saving its content', function()
         vault.setup({
             vault_path = test_vault,
