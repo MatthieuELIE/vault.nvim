@@ -83,6 +83,34 @@ describe('vault', function()
         end
     end)
 
+    it("closes todo buffer opened via split = 'edit' when it is the only window", function()
+        vault.setup({
+            vault_path = test_vault,
+            todos_path = test_vault,
+            split = 'edit',
+        })
+        vim.cmd('only')
+        local expected_path = resolve(test_vault) .. '/' .. vault.get_project_root() .. '/todos.md'
+
+        vault.toggle_todo()
+
+        local buf = vim.api.nvim_get_current_buf()
+        vim.api.nvim_buf_set_lines(buf, 0, -1, false, { 'some todo content' })
+
+        vault.toggle_todo()
+
+        local file = io.open(expected_path, 'r')
+        local content = file and file:read('*a')
+        if file then
+            file:close()
+        end
+
+        assert.are.equal(-1, vim.fn.bufnr(expected_path))
+        assert.are.equal(0, #notifications)
+        assert.truthy(file)
+        assert.are.equal('some todo content\n', content)
+    end)
+
     it('handles paths with percent and hash characters correctly', function()
         local special_project_vault = test_vault .. '/proj%e#t'
         vim.fn.mkdir(special_project_vault, 'p')
