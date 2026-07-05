@@ -1,14 +1,45 @@
 local M = {}
 
-local vault = vim.fn.expand(vim.env.VAULT_PATH or '~/vault')
-local split_cmd = 'vsplit'
-local todos_root = vault
-local daily_root = vault .. '/daily'
+local DEFAULT_VAULT_PATH = '~/vault'
+
+local function resolve_vault_path(path, source)
+    if path == nil then
+        return vim.fn.expand(DEFAULT_VAULT_PATH)
+    end
+
+    local expanded = path ~= '' and vim.fn.expand(path) or ''
+    if expanded ~= '' then
+        return expanded
+    end
+
+    vim.notify(
+        string.format("vault.nvim: %s is empty or invalid, falling back to '%s'", source, DEFAULT_VAULT_PATH),
+        vim.log.levels.ERROR
+    )
+    return vim.fn.expand(DEFAULT_VAULT_PATH)
+end
+
+local state = {
+    split_cmd = 'vsplit',
+}
+state.vault = resolve_vault_path(vim.env.VAULT_PATH, 'VAULT_PATH')
+state.todos_root = state.vault
+state.daily_root = state.vault .. '/daily'
 
 M.get_project_root = function()
     local found = vim.fs.find('.git', { upward = true, path = vim.fn.getcwd() })[1]
     local root = found and vim.fs.dirname(found) or vim.fn.getcwd()
-    return vim.fn.fnamemodify(root, ':t')
+    local name = vim.fn.fnamemodify(root, ':t')
+
+    if name == '' then
+        vim.notify(
+            "vault.nvim: could not determine a project name from '" .. root .. "', using 'root'",
+            vim.log.levels.WARN
+        )
+        return 'root'
+    end
+
+    return name
 end
 
 local function open_or_close(path)
@@ -43,12 +74,19 @@ local function open_or_close(path)
         vim.api.nvim_buf_delete(bufnr, { force = true })
         return
     end
-    vim.fn.mkdir(vim.fn.fnamemodify(path, ':h'), 'p')
-    vim.cmd(split_cmd .. ' ' .. vim.fn.fnameescape(path))
+    local parent = vim.fn.fnamemodify(path, ':h')
+    if vim.fn.isdirectory(parent) == 0 then
+        local ok, created = pcall(vim.fn.mkdir, parent, 'p')
+        if not ok or created == 0 then
+            vim.notify('vault.nvim: could not create directory ' .. parent, vim.log.levels.ERROR)
+            return
+        end
+    end
+    vim.cmd(state.split_cmd .. ' ' .. vim.fn.fnameescape(path))
 end
 
 M.toggle_todo = function()
-    open_or_close(todos_root .. '/' .. M.get_project_root() .. '/todos.md')
+    open_or_close(state.todos_root .. '/' .. M.get_project_root() .. '/todos.md')
 end
 
 M.toggle_diary = function(date_str)
@@ -68,7 +106,7 @@ M.toggle_diary = function(date_str)
         date_table.month,
         date_table.year
     )
-    open_or_close(daily_root .. path)
+    open_or_close(state.daily_root .. path)
 end
 
 M.toggle_checkbox = function()
@@ -78,10 +116,10 @@ M.toggle_checkbox = function()
 
     local line = vim.api.nvim_get_current_line()
     local indent, content = line:match('^(%s*)(.*)')
-    local state, rest = content:match('^%- %[([ x])%](.*)')
+    local checkbox_state, rest = content:match('^%- %[([ x])%](.*)')
 
-    if state then
-        local new_state = state == 'x' and ' ' or 'x'
+    if checkbox_state then
+        local new_state = checkbox_state == 'x' and ' ' or 'x'
         local new_line = string.format('%s- [%s]%s', indent, new_state, rest)
         vim.api.nvim_set_current_line(new_line)
     else
@@ -92,16 +130,18 @@ end
 M.setup = function(opts)
     opts = opts or {}
     if opts.vault_path then
-        vault = vim.fn.expand(opts.vault_path)
+        state.vault = resolve_vault_path(opts.vault_path, 'vault_path')
+        state.todos_root = state.vault
+        state.daily_root = state.vault .. '/daily'
     end
     if opts.split then
-        split_cmd = opts.split
+        state.split_cmd = opts.split
     end
     if opts.todos_path then
-        todos_root = vim.fn.expand(opts.todos_path)
+        state.todos_root = vim.fn.expand(opts.todos_path)
     end
     if opts.daily_path then
-        daily_root = vim.fn.expand(opts.daily_path)
+        state.daily_root = vim.fn.expand(opts.daily_path)
     end
 
     vim.api.nvim_create_user_command('VaultToggleTodo', M.toggle_todo, { force = true })
@@ -126,7 +166,7 @@ M.setup = function(opts)
 
     if keys.toggle_checkbox then
         vim.api.nvim_create_autocmd('BufEnter', {
-            pattern = vault .. '/*/todos.md',
+            pattern = state.vault .. '/*/todos.md',
             callback = function(args)
                 vim.keymap.set(
                     'n',

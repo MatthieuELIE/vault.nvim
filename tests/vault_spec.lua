@@ -44,6 +44,20 @@ describe('vault', function()
         assert.are.equal(expected_path, resolve(buf_name))
     end)
 
+    it('derives todos_root and daily_root from vault_path when they are not set explicitly', function()
+        vault.setup({ vault_path = test_vault })
+
+        local expected_todos_path = resolve(test_vault) .. '/' .. vault.get_project_root() .. '/todos.md'
+        vault.toggle_todo()
+        local todos_buf_name = vim.api.nvim_buf_get_name(vim.api.nvim_get_current_buf())
+        assert.are.equal(expected_todos_path, resolve(todos_buf_name))
+
+        vault.toggle_diary('2026-05-15')
+        local expected_diary_path = resolve(test_vault) .. '/daily/2026/05/15-05-2026.md'
+        local diary_buf_name = vim.api.nvim_buf_get_name(vim.api.nvim_get_current_buf())
+        assert.are.equal(expected_diary_path, resolve(diary_buf_name))
+    end)
+
     it('closes todo buffer when already open saving its content', function()
         vault.setup({
             vault_path = test_vault,
@@ -86,6 +100,75 @@ describe('vault', function()
         vault.toggle_todo()
 
         assert.are.equal(-1, vim.fn.bufnr(expected_path))
+    end)
+
+    it('warns and aborts when the parent directory cannot be created', function()
+        local blocking_file = test_vault .. '/blocked'
+        local f = io.open(blocking_file, 'w')
+        f:write('x')
+        f:close()
+
+        vault.setup({ vault_path = test_vault, todos_path = blocking_file })
+
+        vault.toggle_todo()
+
+        assert.are.equal(1, #notifications)
+        assert.are.equal(vim.log.levels.ERROR, notifications[1].level)
+        assert.truthy(notifications[1].msg:match('could not create directory'))
+    end)
+
+    it('opens todo file for a project name with spaces and special characters', function()
+        local original_cwd = vim.fn.getcwd()
+        local special_project = test_vault .. '/code/proj with space #1 %2'
+        vim.fn.mkdir(special_project .. '/.git', 'p')
+        vim.fn.chdir(special_project)
+
+        vault.setup({
+            vault_path = test_vault,
+            todos_path = test_vault,
+        })
+        local expected_path = resolve(test_vault) .. '/' .. vault.get_project_root() .. '/todos.md'
+
+        vault.toggle_todo()
+
+        local buf = vim.api.nvim_get_current_buf()
+        assert.are.equal(expected_path, resolve(vim.api.nvim_buf_get_name(buf)))
+
+        vault.toggle_todo()
+        vim.fn.chdir(original_cwd)
+
+        assert.are.equal(-1, vim.fn.bufnr(expected_path))
+    end)
+
+    it('falls back to a safe project name and warns when project root name is empty', function()
+        local original_cwd = vim.fn.getcwd()
+        vim.fn.chdir('/')
+
+        local name = vault.get_project_root()
+
+        vim.fn.chdir(original_cwd)
+
+        assert.are.equal('root', name)
+        assert.are.equal(1, #notifications)
+        assert.are.equal(vim.log.levels.WARN, notifications[1].level)
+    end)
+
+    it('does not warn when VAULT_PATH env var is unset', function()
+        local original_env = vim.env.VAULT_PATH
+        vim.env.VAULT_PATH = nil
+        package.loaded['vault'] = nil
+        require('vault')
+        vim.env.VAULT_PATH = original_env
+
+        assert.are.equal(0, #notifications)
+    end)
+
+    it('falls back to default vault path and warns when setup is called with an empty vault_path', function()
+        vault.setup({ vault_path = '' })
+
+        assert.are.equal(1, #notifications)
+        assert.are.equal(vim.log.levels.ERROR, notifications[1].level)
+        assert.truthy(notifications[1].msg:match('vault_path'))
     end)
 
     it('aborts deletion and warns if buffer cannot be saved', function()
