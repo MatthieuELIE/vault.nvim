@@ -18,11 +18,11 @@ Neovim >= 0.8 (the plugin relies on the `vim.fs` module — `vim.fs.find`,
 
 ## Installation
 
-Using [lazy.nvim](https://github.com/folke/lazy.nvim):
+Using [lazy.nvim](https://github.com/folke/lazy.nvim) — add this spec to the list passed to `require('lazy').setup({...})`:
 
 ```lua
 {
-    'username/vault.nvim',
+    'MatthieuELIE/vault.nvim',
     keys = {
         { '<leader>vt', '<cmd>VaultToggleTodo<CR>', desc = 'Toggle Vault Todo' },
         { '<leader>vc', '<cmd>VaultToggleCheckbox<CR>', desc = 'Toggle Vault Checkbox' },
@@ -36,18 +36,18 @@ Using [lazy.nvim](https://github.com/folke/lazy.nvim):
 }
 ```
 
-Using [vim.pack](https://neovim.io/doc/user/pack.html) (built into Neovim >= 0.12, no plugin manager needed):
+Using [vim.pack](https://neovim.io/doc/user/pack.html) (built into Neovim >= 0.12, no plugin manager needed) — drop this straight into `init.lua`:
 
 ```lua
-vim.pack.add({ 'https://github.com/username/vault.nvim' })
+vim.pack.add({ 'https://github.com/MatthieuELIE/vault.nvim' })
 require('vault').setup({})
 ```
 
-Using [packer.nvim](https://github.com/wbthomason/packer.nvim):
+Using [packer.nvim](https://github.com/wbthomason/packer.nvim) — add this inside `require('packer').startup(function(use) ... end)`:
 
 ```lua
 use({
-    'username/vault.nvim',
+    'MatthieuELIE/vault.nvim',
     config = function()
         require('vault').setup({})
     end,
