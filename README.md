@@ -11,6 +11,11 @@ A lightweight, project-specific task manager and diary plugin for Neovim.
 - Automatically handles directory creation based on git root or active project root.
 - Simple, indentation-aware checkbox toggler.
 
+## Requirements
+
+Neovim >= 0.8 (the plugin relies on the `vim.fs` module — `vim.fs.find`,
+`vim.fs.dirname`, `vim.fs.normalize` — added in that release).
+
 ## Installation
 
 Using [lazy.nvim](https://github.com/folke/lazy.nvim):
@@ -29,6 +34,24 @@ Using [lazy.nvim](https://github.com/folke/lazy.nvim):
     },
     opts = {}
 }
+```
+
+Using [vim.pack](https://neovim.io/doc/user/pack.html) (built into Neovim >= 0.12, no plugin manager needed):
+
+```lua
+vim.pack.add({ 'https://github.com/username/vault.nvim' })
+require('vault').setup({})
+```
+
+Using [packer.nvim](https://github.com/wbthomason/packer.nvim):
+
+```lua
+use({
+    'username/vault.nvim',
+    config = function()
+        require('vault').setup({})
+    end,
+})
 ```
 
 ## Configuration
