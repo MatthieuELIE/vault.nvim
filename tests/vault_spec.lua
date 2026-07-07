@@ -9,9 +9,17 @@ describe('vault', function()
         return vim.fs.normalize(vim.loop.fs_realpath(path) or path)
     end
 
+    local function reload_vault()
+        for name in pairs(package.loaded) do
+            if name:match('^vault') then
+                package.loaded[name] = nil
+            end
+        end
+        return require('vault')
+    end
+
     before_each(function()
-        package.loaded['vault'] = nil
-        vault = require('vault')
+        vault = reload_vault()
         test_vault = vim.fn.tempname() .. '_vault'
         vim.fn.mkdir(test_vault, 'p')
         notifications = {}
@@ -299,8 +307,7 @@ describe('vault', function()
     it('does not warn when VAULT_PATH env var is unset', function()
         local original_env = vim.env.VAULT_PATH
         vim.env.VAULT_PATH = nil
-        package.loaded['vault'] = nil
-        require('vault')
+        reload_vault()
         vim.env.VAULT_PATH = original_env
 
         assert.are.equal(0, #notifications)
@@ -865,6 +872,27 @@ describe('vault', function()
         vim.ui.input = original_input
 
         assert.are.equal(qflist_count_before, vim.fn.getqflist({ nr = '$' }).nr)
+    end)
+
+    it('calls Telescope live_grep with the right options when Telescope is available', function()
+        vault.setup({
+            vault_path = test_vault,
+            todos_path = test_vault,
+        })
+        local captured_opts
+        package.loaded['telescope.builtin'] = {
+            live_grep = function(opts)
+                captured_opts = opts
+            end,
+        }
+
+        vault.search_todos('buy')
+
+        package.loaded['telescope.builtin'] = nil
+
+        assert.are.same({ resolve(test_vault) }, { resolve(captured_opts.search_dirs[1]) })
+        assert.are.equal('*todos.md', captured_opts.glob_pattern)
+        assert.are.equal('buy', captured_opts.default_text)
     end)
 
     it('does nothing if current buffer is not todos.md', function()
