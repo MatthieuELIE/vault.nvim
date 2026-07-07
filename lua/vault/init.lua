@@ -24,9 +24,12 @@ local DEFAULT_TEMPLATE_FILENAMES = {
     daily = 'Daily Note Template.md',
 }
 
+local DEFAULT_DIARY_DATE_FORMAT = '%d-%m-%Y'
+
 local state = {
     split_cmd = 'vsplit',
     template_filenames = DEFAULT_TEMPLATE_FILENAMES,
+    date_format = DEFAULT_DIARY_DATE_FORMAT,
 }
 state.vault = resolve_vault_path(vim.env.VAULT_PATH, 'VAULT_PATH')
 state.todos_root = state.vault
@@ -103,11 +106,22 @@ local function close_buffer(bufnr)
 end
 
 local function diary_date_str_from_bufname(name)
-    local day, month, year = name:match('(%d%d)%-(%d%d)%-(%d%d%d%d)%.md$')
-    if not day then
+    local year, month = name:match('/(%d%d%d%d)/(%d%d)/[^/]+%.md$')
+    if not year then
         return nil
     end
-    return string.format('%s-%s-%s', year, month, day)
+
+    for day = 1, 31 do
+        local candidate = os.date(
+            state.date_format,
+            os.time({ year = tonumber(year), month = tonumber(month), day = day })
+        ) .. '.md'
+        if name:sub(-#candidate) == candidate then
+            return string.format('%s-%s-%02d', year, month, day)
+        end
+    end
+
+    return nil
 end
 
 local function find_other_open_diary_bufnr(date_str)
@@ -168,14 +182,9 @@ end
 local function diary_path(time)
     local date_table = os.date('*t', time)
     return state.daily_root
-        .. string.format(
-            '/%04d/%02d/%02d-%02d-%04d.md',
-            date_table.year,
-            date_table.month,
-            date_table.day,
-            date_table.month,
-            date_table.year
-        )
+        .. string.format('/%04d/%02d/', date_table.year, date_table.month)
+        .. os.date(state.date_format, os.time(date_table))
+        .. '.md'
 end
 
 M.toggle_diary = function(date_str)
@@ -304,6 +313,9 @@ M.setup = function(opts)
     end
     if opts.daily_path then
         state.daily_root = vim.fn.expand(opts.daily_path)
+    end
+    if opts.date_format then
+        state.date_format = opts.date_format
     end
     if opts.templates_path then
         state.templates_path = vim.fn.expand(opts.templates_path)

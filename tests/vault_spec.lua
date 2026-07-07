@@ -508,6 +508,39 @@ describe('vault', function()
         assert.are.equal('some diary content\n', content)
     end)
 
+    it('opens diary using a custom date_format', function()
+        vault.setup({
+            vault_path = test_vault,
+            daily_path = test_vault .. '/daily',
+            date_format = '%Y-%m-%d',
+        })
+
+        vault.toggle_diary('2026-05-15')
+
+        local expected_path = resolve(test_vault) .. '/daily/2026/05/2026-05-15.md'
+        local current_buf = vim.api.nvim_get_current_buf()
+        assert.are.equal(expected_path, resolve(vim.api.nvim_buf_get_name(current_buf)))
+    end)
+
+    it('closes a different open diary note before opening a new date with a custom date_format', function()
+        vault.setup({
+            vault_path = test_vault,
+            daily_path = test_vault .. '/daily',
+            date_format = '%Y-%m-%d',
+        })
+        local previous_path = resolve(test_vault) .. '/daily/2026/05/2026-05-15.md'
+        local next_path = resolve(test_vault) .. '/daily/2026/05/2026-05-16.md'
+
+        vault.toggle_diary('2026-05-15')
+        vault.toggle_diary('2026-05-16')
+
+        local current_buf = vim.api.nvim_get_current_buf()
+
+        assert.are.equal(-1, vim.fn.bufnr(previous_path))
+        assert.are.equal(next_path, resolve(vim.api.nvim_buf_get_name(current_buf)))
+        assert.are.equal(2, #vim.api.nvim_list_wins())
+    end)
+
     it('moves to the next day diary from within a diary buffer', function()
         vault.setup({
             vault_path = test_vault,
