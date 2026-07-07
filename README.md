@@ -65,6 +65,6 @@ opts = {
 
 ## Contributing
 
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for how the code is
-organized, and [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) for running
+See [ARCHITECTURE.md](ARCHITECTURE.md) for how the code is
+organized, and [CONTRIBUTING.md](CONTRIBUTING.md) for running
 tests, lint, and formatting.

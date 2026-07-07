@@ -1,6 +1,6 @@
 # Architecture
 
-For install/config docs see the [README](../README.md). This is the internals
+For install/config docs see the [README](README.md). This is the internals
 map for contributors.
 
 ## Module layout
