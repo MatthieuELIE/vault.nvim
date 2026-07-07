@@ -113,7 +113,7 @@ M.open_or_close = function(path, note_type)
         end
     end
 
-    vim.cmd(config.state.split_cmd .. ' ' .. vim.fn.fnameescape(path))
+    vim.cmd(config.state.split .. ' ' .. vim.fn.fnameescape(path))
     if vim.fn.filereadable(path) == 0 then
         apply_template(note_type)
     end

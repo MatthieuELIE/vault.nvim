@@ -27,15 +27,15 @@ local DEFAULT_TEMPLATE_FILENAMES = {
 local DEFAULT_DIARY_DATE_FORMAT = '%d-%m-%Y'
 
 M.state = {
-    split_cmd = 'vsplit',
+    split = 'vsplit',
     template_filenames = DEFAULT_TEMPLATE_FILENAMES,
     date_format = DEFAULT_DIARY_DATE_FORMAT,
 }
 
 local function set_vault_path(path, source)
-    M.state.vault = resolve_vault_path(path, source)
-    M.state.todos_root = M.state.vault
-    M.state.daily_root = M.state.vault .. '/daily'
+    M.state.vault_path = resolve_vault_path(path, source)
+    M.state.todos_root = M.state.vault_path
+    M.state.daily_root = M.state.vault_path .. '/daily'
 end
 
 set_vault_path(vim.env.VAULT_PATH, 'VAULT_PATH')
@@ -47,7 +47,7 @@ M.setup = function(opts)
         set_vault_path(opts.vault_path, 'vault_path')
     end
     if opts.split then
-        state.split_cmd = opts.split
+        state.split = opts.split
     end
     if opts.todos_path then
         state.todos_root = vim.fn.expand(opts.todos_path)

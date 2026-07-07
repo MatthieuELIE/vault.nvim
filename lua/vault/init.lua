@@ -45,7 +45,7 @@ M.setup = function(opts)
 
     if keys.toggle_checkbox then
         vim.api.nvim_create_autocmd('BufEnter', {
-            pattern = config.state.vault .. '/*/todos.md',
+            pattern = config.state.vault_path .. '/*/todos.md',
             callback = function(args)
                 vim.keymap.set(
                     'n',
