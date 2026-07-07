@@ -112,16 +112,6 @@ M.search_todos = function(query)
             return
         end
 
-        local ok_fzf, fzf_lua = pcall(require, 'fzf-lua')
-        if ok_fzf then
-            fzf_lua.live_grep({
-                cwd = config.state.todos_root,
-                search = resolved_query,
-                rg_opts = "--column --line-number --no-heading --color=always --smart-case -g '*todos.md'",
-            })
-            return
-        end
-
         search_todos_fallback(resolved_query)
     end
 

@@ -1,16 +1,7 @@
 local config = require('vault.config')
 local notes = require('vault.notes')
 
-local M = {}
-
-M.get_project_root = notes.get_project_root
-M.toggle_todo = notes.toggle_todo
-M.toggle_checkbox = notes.toggle_checkbox
-M.toggle_diary = notes.toggle_diary
-M.diary_next_day = notes.diary_next_day
-M.diary_prev_day = notes.diary_prev_day
-M.diary_goto = notes.diary_goto
-M.search_todos = notes.search_todos
+local M = vim.tbl_extend('force', {}, notes)
 
 M.setup = function(opts)
     opts = opts or {}
@@ -38,33 +29,18 @@ M.setup = function(opts)
         search_todos = '<leader>vs',
     }, opts.keys or {})
 
-    if keys.toggle_todo then
-        vim.keymap.set('n', keys.toggle_todo, M.toggle_todo, { noremap = true, desc = 'Toggle project todo' })
-    end
-
-    if keys.toggle_diary then
-        vim.keymap.set('n', keys.toggle_diary, M.toggle_diary, { noremap = true, desc = 'Toggle today diary' })
-    end
-
-    if keys.diary_next then
-        vim.keymap.set('n', keys.diary_next, M.diary_next_day, { noremap = true, desc = 'Go to next diary day' })
-    end
-
-    if keys.diary_prev then
-        vim.keymap.set('n', keys.diary_prev, M.diary_prev_day, { noremap = true, desc = 'Go to previous diary day' })
-    end
-
-    if keys.diary_goto then
-        vim.keymap.set('n', keys.diary_goto, M.diary_goto, { noremap = true, desc = 'Go to a diary date' })
-    end
-
-    if keys.search_todos then
-        vim.keymap.set(
-            'n',
-            keys.search_todos,
-            M.search_todos,
-            { noremap = true, desc = 'Search todos across projects' }
-        )
+    local keymap_specs = {
+        { name = 'toggle_todo', fn = M.toggle_todo, desc = 'Toggle project todo' },
+        { name = 'toggle_diary', fn = M.toggle_diary, desc = 'Toggle today diary' },
+        { name = 'diary_next', fn = M.diary_next_day, desc = 'Go to next diary day' },
+        { name = 'diary_prev', fn = M.diary_prev_day, desc = 'Go to previous diary day' },
+        { name = 'diary_goto', fn = M.diary_goto, desc = 'Go to a diary date' },
+        { name = 'search_todos', fn = M.search_todos, desc = 'Search todos across projects' },
+    }
+    for _, spec in ipairs(keymap_specs) do
+        if keys[spec.name] then
+            vim.keymap.set('n', keys[spec.name], spec.fn, { noremap = true, desc = spec.desc })
+        end
     end
 
     if keys.toggle_checkbox then

@@ -31,17 +31,20 @@ M.state = {
     template_filenames = DEFAULT_TEMPLATE_FILENAMES,
     date_format = DEFAULT_DIARY_DATE_FORMAT,
 }
-M.state.vault = resolve_vault_path(vim.env.VAULT_PATH, 'VAULT_PATH')
-M.state.todos_root = M.state.vault
-M.state.daily_root = M.state.vault .. '/daily'
+
+local function set_vault_path(path, source)
+    M.state.vault = resolve_vault_path(path, source)
+    M.state.todos_root = M.state.vault
+    M.state.daily_root = M.state.vault .. '/daily'
+end
+
+set_vault_path(vim.env.VAULT_PATH, 'VAULT_PATH')
 
 M.setup = function(opts)
     local state = M.state
 
     if opts.vault_path then
-        state.vault = resolve_vault_path(opts.vault_path, 'vault_path')
-        state.todos_root = state.vault
-        state.daily_root = state.vault .. '/daily'
+        set_vault_path(opts.vault_path, 'vault_path')
     end
     if opts.split then
         state.split_cmd = opts.split
