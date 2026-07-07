@@ -7,7 +7,7 @@ A lightweight, project-specific task manager and diary plugin for Neovim.
 - Toggle project-specific Markdown TODO list.
 - Open today's diary note (`daily/YYYY/MM/DD-MM-YYYY.md`).
 - Navigate to the previous/next diary day, or jump to an arbitrary date via a prompt.
-- Search todos across all projects (uses Telescope or fzf-lua if installed, falls back to the quickfix list otherwise).
+- Search todos across all projects (uses Telescope if installed, falls back to the quickfix list otherwise).
 - Automatically handles directory creation based on git root or active project root.
 - Simple, indentation-aware checkbox toggler.
 
@@ -42,6 +42,15 @@ opts = {
     daily_path  = '~/vault/daily',  -- default: vault_path/daily
     date_format = '%d-%m-%Y',       -- diary note filename format (os.date tokens)
     split       = 'vsplit',         -- 'split' for horizontal, 'edit' to reuse the current window
+
+    -- Optional: seed newly created notes from template files. Templates are only
+    -- applied to a note the first time it's created, never to an existing file.
+    templates_path = '~/vault/Templates',
+    templates = {
+        todos = 'Todo Template.md',        -- these are the defaults; override either
+        daily = 'Daily Note Template.md',  -- one only if your filenames differ
+    },
+
     keys = {
         toggle_todo     = '<leader>vt',
         toggle_checkbox = '<leader>vc',
@@ -53,3 +62,9 @@ opts = {
     },
 }
 ```
+
+## Contributing
+
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for how the code is
+organized, and [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) for running
+tests, lint, and formatting.
