@@ -1,0 +1,158 @@
+*vault.txt*   Project-specific TODO manager and diary for Neovim
+
+==============================================================================
+CONTENTS                                                     *vault-contents*
+
+  1. Introduction ................................ |vault-introduction|
+  2. Requirements ................................ |vault-requirements|
+  3. Setup ........................................ |vault-setup|
+  4. Configuration ................................ |vault-configuration|
+  5. Commands ..................................... |vault-commands|
+  6. Default mappings ............................. |vault-mappings|
+  7. Contributing ................................. |vault-contributing|
+
+==============================================================================
+1. Introduction                                          *vault-introduction*
+                                                                      *vault*
+
+vault.nvim is a lightweight, project-specific task manager and diary plugin.
+It maintains one Markdown TODO list per project (namespaced by git root) and
+one daily diary note per day, toggling either open or closed in a split.
+
+Features:
+  - Toggle a project-specific Markdown TODO list.
+  - Open today's diary note.
+  - Navigate to the previous/next diary day, or jump to an arbitrary date.
+  - Search TODOs across all projects (Telescope if installed, quickfix list
+    otherwise).
+  - Seed newly created notes from template files.
+  - Indentation-aware checkbox toggler.
+
+==============================================================================
+2. Requirements                                          *vault-requirements*
+
+Neovim >= 0.8. The plugin relies on the |vim.fs| module (`vim.fs.find`,
+`vim.fs.dirname`, `vim.fs.normalize`), added in that release.
+
+==============================================================================
+3. Setup                                                        *vault-setup*
+
+vault.nvim does nothing until >
+
+    require('vault').setup(opts)
+
+<
+`opts` is optional and every field has a default; see |vault-configuration|.
+`setup()` registers the commands in |vault-commands| and the default
+mappings in |vault-mappings|.
+
+==============================================================================
+4. Configuration                                        *vault-configuration*
+
+                                                            *vault-opt-vault_path*
+opts.vault_path ~
+    Base directory for the vault. Resolution order: `opts.vault_path` >
+    `$VAULT_PATH` environment variable > `~/vault`. An empty or unresolvable
+    path falls back to the default and prints an error via |vim.notify|.
+
+                                                            *vault-opt-todos_path*
+opts.todos_path ~
+    Root directory for per-project TODO files. Default: `vault_path`. TODOs
+    are stored at `<todos_path>/<project_name>/todos.md`, where
+    `project_name` is the basename of the nearest `.git` ancestor of the cwd
+    (falling back to the cwd itself).
+
+                                                            *vault-opt-daily_path*
+opts.daily_path ~
+    Root directory for diary notes. Default: `vault_path/daily`. Notes are
+    stored at `<daily_path>/YYYY/MM/<formatted-date>.md`.
+
+                                                            *vault-opt-date_format*
+opts.date_format ~
+    `os.date()` format string used for the diary note filename (without the
+    `.md` extension). Default: `'%d-%m-%Y'`.
+
+                                                            *vault-opt-split*
+opts.split ~
+    Command used to open a note: `'vsplit'` (default), `'split'` for a
+    horizontal split, or `'edit'` to reuse the current window.
+
+                                                            *vault-opt-templates_path*
+opts.templates_path ~
+    Directory containing template files. When set, a template is copied
+    verbatim into a note the first time it's created; existing files are
+    never touched. Unset by default (notes are created empty).
+
+                                                            *vault-opt-templates*
+opts.templates ~
+    Table mapping note type to template filename inside `templates_path`.
+    Defaults: >
+        {
+            todos = 'Todo Template.md',
+            daily = 'Daily Note Template.md',
+        }
+<
+                                                            *vault-opt-keys*
+opts.keys ~
+    Table overriding the default mapping for one or more actions; see
+    |vault-mappings| for the keys and their defaults. Set an action to
+    `false` to disable its mapping.
+
+==============================================================================
+5. Commands                                                  *vault-commands*
+
+                                                            *:VaultToggleTodo*
+:VaultToggleTodo
+    Toggle the current project's `todos.md`.
+
+                                                        *:VaultToggleCheckbox*
+:VaultToggleCheckbox
+    Toggle a leading `- [ ]`/`- [x]` on the current line. Only acts inside a
+    buffer whose name ends in `todos.md`.
+
+                                                        *:VaultToggleDiary*
+:VaultToggleDiary [{date}]
+    Toggle the diary note for {date} (`YYYY-MM-DD`), or today if omitted. An
+    unparseable {date} falls back to today. Opening a new date closes any
+    other currently open diary note first.
+
+                                                        *:VaultDiaryNext*
+:VaultDiaryNext
+    Open the next day's diary note, relative to the currently open diary
+    note if in one, otherwise relative to today.
+
+                                                        *:VaultDiaryPrev*
+:VaultDiaryPrev
+    Open the previous day's diary note. See |:VaultDiaryNext|.
+
+                                                        *:VaultDiaryGoto*
+:VaultDiaryGoto
+    Prompt for a `YYYY-MM-DD` date and open its diary note.
+
+                                                        *:VaultSearchTodos*
+:VaultSearchTodos [{query}]
+    Search {query} across every project's `todos.md`, or prompt for one if
+    omitted. Uses Telescope's `live_grep` if available, otherwise populates
+    the quickfix list.
+
+==============================================================================
+6. Default mappings                                          *vault-mappings*
+
+Normal mode, all overridable via `opts.keys` (see |vault-opt-keys|):
+
+    <leader>vt    |:VaultToggleTodo|
+    <leader>vc    |:VaultToggleCheckbox|  (buffer-local, only in todos.md)
+    <leader>vd    |:VaultToggleDiary|
+    <leader>vn    |:VaultDiaryNext|
+    <leader>vp    |:VaultDiaryPrev|
+    <leader>vg    |:VaultDiaryGoto|
+    <leader>vs    |:VaultSearchTodos|
+
+==============================================================================
+7. Contributing                                          *vault-contributing*
+
+See docs/ARCHITECTURE.md and docs/CONTRIBUTING.md in the repository for
+module boundaries and the development workflow (tests, lint, CI).
+
+==============================================================================
+vim:tw=78:ts=8:noet:ft=help:norl:
