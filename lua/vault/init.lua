@@ -15,8 +15,8 @@ M.setup = function(opts)
     vim.api.nvim_create_user_command('VaultDiaryNext', M.diary_next_day, { force = true })
     vim.api.nvim_create_user_command('VaultDiaryPrev', M.diary_prev_day, { force = true })
     vim.api.nvim_create_user_command('VaultDiaryGoto', M.diary_goto, { force = true })
-    vim.api.nvim_create_user_command('VaultSearchTodos', function(o)
-        M.search_todos(o.args)
+    vim.api.nvim_create_user_command('VaultSearch', function(o)
+        M.search(o.args)
     end, { force = true, nargs = '?' })
 
     local keys = vim.tbl_extend('force', {
@@ -26,7 +26,7 @@ M.setup = function(opts)
         diary_next = '<leader>vn',
         diary_prev = '<leader>vp',
         diary_goto = '<leader>vg',
-        search_todos = '<leader>vs',
+        search = '<leader>vs',
     }, opts.keys or {})
 
     local keymap_specs = {
@@ -35,7 +35,7 @@ M.setup = function(opts)
         { name = 'diary_next', fn = M.diary_next_day, desc = 'Go to next diary day' },
         { name = 'diary_prev', fn = M.diary_prev_day, desc = 'Go to previous diary day' },
         { name = 'diary_goto', fn = M.diary_goto, desc = 'Go to a diary date' },
-        { name = 'search_todos', fn = M.search_todos, desc = 'Search todos across projects' },
+        { name = 'search', fn = M.search, desc = 'Search the vault' },
     }
     for _, spec in ipairs(keymap_specs) do
         if keys[spec.name] then

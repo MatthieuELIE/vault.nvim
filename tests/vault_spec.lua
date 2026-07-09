@@ -821,7 +821,7 @@ describe('vault', function()
             on_confirm('buy')
         end
 
-        vault.search_todos()
+        vault.search()
 
         vim.ui.input = original_input
         local qflist = vim.fn.getqflist()
@@ -849,14 +849,14 @@ describe('vault', function()
             on_confirm('nonexistent')
         end
 
-        vault.search_todos()
+        vault.search()
 
         vim.ui.input = original_input
 
         assert.are.equal(0, #vim.fn.getqflist())
     end)
 
-    it('does nothing when the search todos prompt is cancelled', function()
+    it('does nothing when the search prompt is cancelled', function()
         vault.setup({
             vault_path = test_vault,
             todos_path = test_vault,
@@ -867,7 +867,7 @@ describe('vault', function()
             on_confirm(nil)
         end
 
-        vault.search_todos()
+        vault.search()
 
         vim.ui.input = original_input
 
@@ -886,13 +886,74 @@ describe('vault', function()
             end,
         }
 
-        vault.search_todos('buy')
+        vault.search('buy')
 
         package.loaded['telescope.builtin'] = nil
 
         assert.are.same({ resolve(test_vault) }, { resolve(captured_opts.search_dirs[1]) })
-        assert.are.equal('*todos.md', captured_opts.glob_pattern)
+        assert.are.equal('**/*.md', captured_opts.glob_pattern)
         assert.are.equal('buy', captured_opts.default_text)
+    end)
+
+    it('scopes the fallback search to todos.md files with a leading "todos" keyword', function()
+        vault.setup({
+            vault_path = test_vault,
+            todos_path = test_vault,
+        })
+        vim.fn.mkdir(test_vault .. '/proj-a', 'p')
+        local todos_file = io.open(test_vault .. '/proj-a/todos.md', 'w')
+        todos_file:write('- [ ] buy milk\n')
+        todos_file:close()
+        local other_file = io.open(test_vault .. '/proj-a/other.md', 'w')
+        other_file:write('buy stamps\n')
+        other_file:close()
+
+        vault.search('todos buy')
+
+        local qflist = vim.fn.getqflist()
+
+        assert.are.equal(1, #qflist)
+        assert.truthy(vim.api.nvim_buf_get_name(qflist[1].bufnr):match('proj%-a/todos%.md$'))
+    end)
+
+    it('scopes Telescope live_grep to todos_root with a leading "todos" keyword', function()
+        vault.setup({
+            vault_path = test_vault,
+            todos_path = test_vault,
+        })
+        local captured_opts
+        package.loaded['telescope.builtin'] = {
+            live_grep = function(opts)
+                captured_opts = opts
+            end,
+        }
+
+        vault.search('todos buy')
+
+        package.loaded['telescope.builtin'] = nil
+
+        assert.are.same({ resolve(test_vault) }, { resolve(captured_opts.search_dirs[1]) })
+        assert.are.equal('*/todos.md', captured_opts.glob_pattern)
+        assert.are.equal('buy', captured_opts.default_text)
+    end)
+
+    it('prompts with the scope name when given a bare scope keyword and no query', function()
+        vault.setup({
+            vault_path = test_vault,
+            todos_path = test_vault,
+        })
+        local captured_prompt
+        local original_input = vim.ui.input
+        vim.ui.input = function(opts, on_confirm) ---@diagnostic disable-line: duplicate-set-field
+            captured_prompt = opts.prompt
+            on_confirm(nil)
+        end
+
+        vault.search('todos')
+
+        vim.ui.input = original_input
+
+        assert.truthy(captured_prompt:match('todos'))
     end)
 
     it('does nothing if current buffer is not todos.md', function()

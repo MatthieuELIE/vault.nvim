@@ -74,15 +74,36 @@ M.diary_goto = function()
     end)
 end
 
-local function todos_files()
-    local files = vim.fn.glob(config.state.todos_root .. '/*/todos.md', false, true)
+local SEARCH_SCOPES = {
+    todos = {
+        dir = function()
+            return config.state.todos_root
+        end,
+        glob = '*/todos.md',
+    },
+    daily = {
+        dir = function()
+            return config.state.daily_root
+        end,
+        glob = '**/*.md',
+    },
+    all = {
+        dir = function()
+            return config.state.vault_path
+        end,
+        glob = '**/*.md',
+    },
+}
+
+local function scope_files(scope)
+    local files = vim.fn.glob(scope.dir() .. '/' .. scope.glob, false, true)
     table.sort(files)
     return files
 end
 
-local function search_todos_fallback(query)
+local function search_fallback(query, scope)
     local items = {}
-    for _, path in ipairs(todos_files()) do
+    for _, path in ipairs(scope_files(scope)) do
         local lnum = 0
         for line in io.lines(path) do
             lnum = lnum + 1
@@ -92,11 +113,21 @@ local function search_todos_fallback(query)
         end
     end
 
-    vim.fn.setqflist({}, ' ', { title = 'Vault todos: ' .. query, items = items })
+    vim.fn.setqflist({}, ' ', { title = 'Vault search: ' .. query, items = items })
     vim.cmd('copen')
 end
 
-M.search_todos = function(query)
+M.search = function(input)
+    input = input or ''
+    local scope_name, rest = input:match('^(%a+)%s*(.*)$')
+    local scope = scope_name and SEARCH_SCOPES[scope_name]
+    if scope then
+        input = rest
+    else
+        scope_name = 'all'
+        scope = SEARCH_SCOPES.all
+    end
+
     local function run(resolved_query)
         if not resolved_query or resolved_query == '' then
             return
@@ -105,20 +136,20 @@ M.search_todos = function(query)
         local ok_telescope, telescope_builtin = pcall(require, 'telescope.builtin')
         if ok_telescope then
             telescope_builtin.live_grep({
-                search_dirs = { config.state.todos_root },
-                glob_pattern = '*todos.md',
+                search_dirs = { scope.dir() },
+                glob_pattern = scope.glob,
                 default_text = resolved_query,
             })
             return
         end
 
-        search_todos_fallback(resolved_query)
+        search_fallback(resolved_query, scope)
     end
 
-    if query and query ~= '' then
-        run(query)
+    if input ~= '' then
+        run(input)
     else
-        vim.ui.input({ prompt = 'Search todos: ' }, run)
+        vim.ui.input({ prompt = 'Search vault (' .. scope_name .. '): ' }, run)
     end
 end
 

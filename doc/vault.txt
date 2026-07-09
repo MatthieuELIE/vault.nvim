@@ -23,8 +23,8 @@ Features:
   - Toggle a project-specific Markdown TODO list.
   - Open today's diary note.
   - Navigate to the previous/next diary day, or jump to an arbitrary date.
-  - Search TODOs across all projects (Telescope if installed, quickfix list
-    otherwise).
+  - Search the whole vault, or scope to todos/diary notes only (Telescope if
+    installed, quickfix list otherwise).
   - Seed newly created notes from template files.
   - Indentation-aware checkbox toggler.
 
@@ -129,11 +129,14 @@ opts.keys ~
 :VaultDiaryGoto
     Prompt for a `YYYY-MM-DD` date and open its diary note.
 
-                                                        *:VaultSearchTodos*
-:VaultSearchTodos [{query}]
-    Search {query} across every project's `todos.md`, or prompt for one if
-    omitted. Uses Telescope's `live_grep` if available, otherwise populates
-    the quickfix list.
+                                                              *:VaultSearch*
+:VaultSearch [{scope}] [{query}]
+    Search {query} across the whole vault, or prompt for one if omitted. An
+    optional {scope} keyword (`todos` or `daily`) as the first word narrows
+    the search to just `todos.md` files or just diary notes; anything else
+    is treated as part of {query} and the scope defaults to the whole vault.
+    Uses Telescope's `live_grep` if available, otherwise populates the
+    quickfix list.
 
 ==============================================================================
 6. Default mappings                                          *vault-mappings*
@@ -146,7 +149,7 @@ Normal mode, all overridable via `opts.keys` (see |vault-opt-keys|):
     <leader>vn    |:VaultDiaryNext|
     <leader>vp    |:VaultDiaryPrev|
     <leader>vg    |:VaultDiaryGoto|
-    <leader>vs    |:VaultSearchTodos|
+    <leader>vs    |:VaultSearch|
 
 ==============================================================================
 7. Contributing                                          *vault-contributing*
