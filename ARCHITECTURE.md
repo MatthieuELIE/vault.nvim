@@ -81,11 +81,14 @@ The todo/diary/checkbox/search feature functions, built on
   `todos.md`. Toggles a leading `- [ ]` / `- [x]` on the current line,
   preserving indentation, adding the checkbox prefix if the line doesn't have
   one yet.
-- **`M.search_todos(query)`** — cross-project todo search. Prefers Telescope
-  (`live_grep` scoped to `todos_root`, glob `*todos.md`), otherwise falls back
-  to a hand-rolled case-insensitive substring scan across every
-  `<todos_root>/*/todos.md` that populates the quickfix list. No fzf-lua
-  support.
+- **`M.search(input)`** — vault-wide search. `input`'s leading word is matched
+  against a scope table (`SEARCH_SCOPES`: `todos` → `todos_root`/
+  `*/todos.md`, `daily` → `daily_root`/`**/*.md`, default `all` →
+  `vault_path`/`**/*.md`); if it matches, that word is consumed as the scope
+  and the rest becomes the query, otherwise the whole input is the query and
+  scope stays `all`. Prefers Telescope (`live_grep` scoped to the resolved
+  dir/glob), otherwise falls back to a hand-rolled case-insensitive substring
+  scan that populates the quickfix list. No fzf-lua support.
 - `diary_next_day` / `diary_prev_day` shift the current (or, if not in a
   diary buffer, today's) date by ±1 day and re-run `toggle_diary`.
 - `diary_goto` prompts via `vim.ui.input`, defaulting to the current diary
@@ -100,7 +103,7 @@ Thin entry point. Re-exports `notes.lua`'s public API unchanged (so
 1. Calls `config.setup(opts)`.
 2. Registers user commands: `VaultToggleTodo`, `VaultToggleCheckbox`,
    `VaultToggleDiary` (optional `YYYY-MM-DD` arg), `VaultDiaryNext`,
-   `VaultDiaryPrev`, `VaultDiaryGoto`, `VaultSearchTodos` (optional query arg).
+   `VaultDiaryPrev`, `VaultDiaryGoto`, `VaultSearch` (optional `[todos|daily] query` arg).
 3. Sets keymaps (defaults `<leader>vt/vc/vd/vn/vp/vg/vs`), overridable per-key
    via `opts.keys`.
 4. Buffer-locally maps the checkbox toggle only inside
