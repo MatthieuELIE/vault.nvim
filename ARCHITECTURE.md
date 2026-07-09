@@ -82,11 +82,10 @@ The todo/diary/checkbox/search feature functions, built on
   preserving indentation, adding the checkbox prefix if the line doesn't have
   one yet.
 - **`M.search_todos(query)`** — cross-project todo search. Prefers Telescope
-  (`live_grep` scoped to `todos_root`, glob `*todos.md`), then falls back to a
-  hand-rolled case-insensitive substring scan across every
-  `<todos_root>/*/todos.md` that populates the quickfix list. There's no
-  fzf-lua path in the code despite the README/feature list mentioning it —
-  fzf-lua support hasn't landed yet.
+  (`live_grep` scoped to `todos_root`, glob `*todos.md`), otherwise falls back
+  to a hand-rolled case-insensitive substring scan across every
+  `<todos_root>/*/todos.md` that populates the quickfix list. No fzf-lua
+  support.
 - `diary_next_day` / `diary_prev_day` shift the current (or, if not in a
   diary buffer, today's) date by ±1 day and re-run `toggle_diary`.
 - `diary_goto` prompts via `vim.ui.input`, defaulting to the current diary
