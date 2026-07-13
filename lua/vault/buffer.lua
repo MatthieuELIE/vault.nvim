@@ -2,15 +2,24 @@ local config = require('vault.config')
 
 local M = {}
 
-local function apply_template(note_type)
+M.resolve_template_path = function(note_type)
     local state = config.state
     local filename = note_type and state.template_filenames[note_type]
     if not filename or not state.templates_path then
-        return
+        return nil
     end
 
     local template_path = state.templates_path .. '/' .. filename
     if vim.fn.filereadable(template_path) == 0 then
+        return nil
+    end
+
+    return template_path
+end
+
+local function apply_template(note_type)
+    local template_path = M.resolve_template_path(note_type)
+    if not template_path then
         return
     end
 
