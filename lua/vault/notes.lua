@@ -171,4 +171,101 @@ M.toggle_checkbox = function()
     end
 end
 
+local function line_indent(line)
+    return #line:match('^%s*')
+end
+
+local function line_checkbox_state(line)
+    return line:match('^%s*%- %[([ x])%]')
+end
+
+local function has_unchecked_child(lines, index)
+    local indent = line_indent(lines[index])
+    for offset = index + 1, #lines do
+        local next_line = lines[offset]
+        if line_indent(next_line) <= indent then
+            return false
+        end
+        if line_checkbox_state(next_line) == ' ' then
+            return true
+        end
+    end
+    return false
+end
+
+local function append_to_archive(archive_path, project_name, archived_lines)
+    local existing = vim.fn.filereadable(archive_path) == 1 and vim.fn.readfile(archive_path) or nil
+    local today = os.date('%Y-%m-%d')
+    local chunk = {}
+    local need_heading
+
+    if not existing then
+        vim.list_extend(chunk, { '# ' .. project_name .. ' Archive', '' })
+        need_heading = true
+    else
+        local last_heading = nil
+        for i = #existing, 1, -1 do
+            last_heading = existing[i]:match('^### (%d%d%d%d%-%d%d%-%d%d)$')
+            if last_heading then
+                break
+            end
+        end
+        need_heading = last_heading ~= today
+        if need_heading then
+            table.insert(chunk, '')
+        end
+    end
+
+    if need_heading then
+        vim.list_extend(chunk, { '### ' .. today, '' })
+    end
+
+    vim.list_extend(chunk, archived_lines)
+    vim.fn.writefile(chunk, archive_path, 'a')
+end
+
+M.archive_todos = function()
+    local todos_path = vim.api.nvim_buf_get_name(0)
+    if not todos_path:match('todos%.md$') then
+        return
+    end
+
+    local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+    local remaining, archived, orphaned = {}, {}, {}
+
+    for index, line in ipairs(lines) do
+        if line_checkbox_state(line) == 'x' then
+            table.insert(archived, line)
+            if has_unchecked_child(lines, index) then
+                table.insert(orphaned, line)
+            end
+        else
+            table.insert(remaining, line)
+        end
+    end
+
+    if #archived == 0 then
+        vim.notify('vault.nvim: nothing to archive', vim.log.levels.INFO)
+        return
+    end
+
+    vim.api.nvim_buf_set_lines(0, 0, -1, false, remaining)
+    vim.cmd('silent! write')
+    if vim.bo.modified then
+        vim.notify('vault.nvim: could not save todos.md, archiving aborted', vim.log.levels.WARN)
+        return
+    end
+
+    if #orphaned > 0 then
+        vim.notify(
+            'vault.nvim: archived item(s) left an unfinished sub-item behind:\n' .. table.concat(orphaned, '\n'),
+            vim.log.levels.WARN
+        )
+    end
+
+    local archive_path = vim.fn.fnamemodify(todos_path, ':h') .. '/archive.md'
+    local project_name = vim.fn.fnamemodify(todos_path, ':h:t')
+    append_to_archive(archive_path, project_name, archived)
+end
+
 return M

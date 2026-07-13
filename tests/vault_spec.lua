@@ -803,6 +803,207 @@ describe('vault', function()
         assert.are.equal('- [ ] some task', lines[1])
     end)
 
+    local function stub_today(date_str)
+        local original_os_date = os.date
+        os.date = function(fmt, ...) ---@diagnostic disable-line: duplicate-set-field
+            if fmt == '%Y-%m-%d' then
+                return date_str
+            end
+            return original_os_date(fmt, ...)
+        end
+        return original_os_date
+    end
+
+    it('archives checked todos in order, saves todos.md, and titles a new archive.md', function()
+        vault.setup({
+            vault_path = test_vault,
+            todos_path = test_vault,
+        })
+        vault.toggle_todo()
+        local buf = vim.api.nvim_get_current_buf()
+        vim.api.nvim_buf_set_lines(buf, 0, -1, false, {
+            '- [ ] pending',
+            '- [x] done 1',
+            '- [x] done 2',
+        })
+        local archive_path = resolve(test_vault) .. '/' .. vault.get_project_root() .. '/archive.md'
+        local original_os_date = stub_today('2026-07-13')
+
+        vault.archive_todos()
+
+        os.date = original_os_date
+        local remaining = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+        local archive_lines = vim.fn.readfile(archive_path)
+
+        assert.are.same({ '- [ ] pending' }, remaining)
+        assert.is_false(vim.bo[buf].modified)
+        assert.are.same({
+            '# ' .. vault.get_project_root() .. ' Archive',
+            '',
+            '### 2026-07-13',
+            '',
+            '- [x] done 1',
+            '- [x] done 2',
+        }, archive_lines)
+    end)
+
+    it('appends under the existing day section without duplicating the heading', function()
+        vault.setup({
+            vault_path = test_vault,
+            todos_path = test_vault,
+        })
+        vault.toggle_todo()
+        local buf = vim.api.nvim_get_current_buf()
+        local archive_path = resolve(test_vault) .. '/' .. vault.get_project_root() .. '/archive.md'
+        vim.fn.writefile({
+            '# ' .. vault.get_project_root() .. ' Archive',
+            '',
+            '### 2026-07-13',
+            '',
+            '- [x] earlier today',
+        }, archive_path)
+        vim.api.nvim_buf_set_lines(buf, 0, -1, false, { '- [x] later today' })
+        local original_os_date = stub_today('2026-07-13')
+
+        vault.archive_todos()
+
+        os.date = original_os_date
+        local archive_lines = vim.fn.readfile(archive_path)
+
+        assert.are.same({
+            '# ' .. vault.get_project_root() .. ' Archive',
+            '',
+            '### 2026-07-13',
+            '',
+            '- [x] earlier today',
+            '- [x] later today',
+        }, archive_lines)
+    end)
+
+    it('opens a new day section when the archive last entry is a different day', function()
+        vault.setup({
+            vault_path = test_vault,
+            todos_path = test_vault,
+        })
+        vault.toggle_todo()
+        local buf = vim.api.nvim_get_current_buf()
+        local archive_path = resolve(test_vault) .. '/' .. vault.get_project_root() .. '/archive.md'
+        vim.fn.writefile({
+            '# ' .. vault.get_project_root() .. ' Archive',
+            '',
+            '### 2026-07-01',
+            '',
+            '- [x] old item',
+        }, archive_path)
+        vim.api.nvim_buf_set_lines(buf, 0, -1, false, { '- [x] new item' })
+        local original_os_date = stub_today('2026-07-13')
+
+        vault.archive_todos()
+
+        os.date = original_os_date
+        local archive_lines = vim.fn.readfile(archive_path)
+
+        assert.are.same({
+            '# ' .. vault.get_project_root() .. ' Archive',
+            '',
+            '### 2026-07-01',
+            '',
+            '- [x] old item',
+            '',
+            '### 2026-07-13',
+            '',
+            '- [x] new item',
+        }, archive_lines)
+    end)
+
+    it('warns without moving an unchecked sub-item when its parent is archived', function()
+        vault.setup({
+            vault_path = test_vault,
+            todos_path = test_vault,
+        })
+        vault.toggle_todo()
+        local buf = vim.api.nvim_get_current_buf()
+        vim.api.nvim_buf_set_lines(buf, 0, -1, false, {
+            '- [x] parent',
+            '  - [ ] child',
+        })
+
+        vault.archive_todos()
+
+        local remaining = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+
+        assert.are.same({ '  - [ ] child' }, remaining)
+        assert.are.equal(1, #notifications)
+        assert.are.equal(vim.log.levels.WARN, notifications[1].level)
+        assert.truthy(notifications[1].msg:match('unfinished sub%-item'))
+    end)
+
+    it('does nothing when there are no checked todos', function()
+        vault.setup({
+            vault_path = test_vault,
+            todos_path = test_vault,
+        })
+        vault.toggle_todo()
+        local buf = vim.api.nvim_get_current_buf()
+        vim.api.nvim_buf_set_lines(buf, 0, -1, false, { '- [ ] pending' })
+        local archive_path = resolve(test_vault) .. '/' .. vault.get_project_root() .. '/archive.md'
+
+        vault.archive_todos()
+
+        local remaining = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+
+        assert.are.same({ '- [ ] pending' }, remaining)
+        assert.are.equal(0, vim.fn.filereadable(archive_path))
+        assert.are.equal(1, #notifications)
+        assert.are.equal(vim.log.levels.INFO, notifications[1].level)
+    end)
+
+    it('does nothing when current buffer is not todos.md', function()
+        vault.setup({
+            vault_path = test_vault,
+            todos_path = test_vault,
+        })
+        vim.cmd('enew')
+        vim.api.nvim_buf_set_lines(0, 0, -1, false, { '- [x] done' })
+
+        vault.archive_todos()
+
+        local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+
+        assert.are.same({ '- [x] done' }, lines)
+        assert.are.equal(0, #notifications)
+    end)
+
+    it('aborts archiving and warns if todos.md cannot be saved', function()
+        vault.setup({
+            vault_path = test_vault,
+            todos_path = test_vault,
+        })
+        vault.toggle_todo()
+        local buf = vim.api.nvim_get_current_buf()
+        vim.api.nvim_buf_set_lines(buf, 0, -1, false, { '- [ ] pending', '- [x] done' })
+        local archive_path = resolve(test_vault) .. '/' .. vault.get_project_root() .. '/archive.md'
+        local original_cmd = vim.cmd
+        vim.cmd = function(cmd_str) ---@diagnostic disable-line: duplicate-set-field
+            if cmd_str == 'silent! write' then
+                return
+            else
+                original_cmd(cmd_str)
+            end
+        end
+
+        vault.archive_todos()
+
+        vim.cmd = original_cmd
+        local remaining = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+
+        assert.are.same({ '- [ ] pending' }, remaining)
+        assert.is_true(vim.bo[buf].modified)
+        assert.are.equal(0, vim.fn.filereadable(archive_path))
+        assert.are.equal(1, #notifications)
+        assert.truthy(notifications[1].msg:match('could not save'))
+    end)
+
     it('populates the quickfix list with matches across projects todos.md files', function()
         vault.setup({
             vault_path = test_vault,

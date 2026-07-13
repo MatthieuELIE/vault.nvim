@@ -110,6 +110,16 @@ opts.keys ~
     Toggle a leading `- [ ]`/`- [x]` on the current line. Only acts inside a
     buffer whose name ends in `todos.md`.
 
+                                                          *:VaultArchiveTodos*
+:VaultArchiveTodos
+    Move every checked (`- [x]`) line out of the current `todos.md` into an
+    `archive.md` next to it, grouped under a `### YYYY-MM-DD` heading for
+    today (reused if the last entry in the archive is already from today).
+    Saves `todos.md` after removing the lines; aborts without touching
+    `archive.md` if the save fails. Only acts inside a buffer whose name
+    ends in `todos.md`. If a checked line has an unchecked sub-item, the
+    sub-item is left in place and a warning is shown.
+
                                                         *:VaultToggleDiary*
 :VaultToggleDiary [{date}]
     Toggle the diary note for {date} (`YYYY-MM-DD`), or today if omitted. An
@@ -145,6 +155,7 @@ Normal mode, all overridable via `opts.keys` (see |vault-opt-keys|):
 
     <leader>vt    |:VaultToggleTodo|
     <leader>vc    |:VaultToggleCheckbox|  (buffer-local, only in todos.md)
+    <leader>va    |:VaultArchiveTodos|    (buffer-local, only in todos.md)
     <leader>vd    |:VaultToggleDiary|
     <leader>vn    |:VaultDiaryNext|
     <leader>vp    |:VaultDiaryPrev|
