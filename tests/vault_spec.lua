@@ -304,6 +304,88 @@ describe('vault', function()
         assert.are.same({ '## Custom' }, lines)
     end)
 
+    it('appends a todo line to an already existing todos.md without opening it', function()
+        vault.setup({
+            vault_path = test_vault,
+            todos_path = test_vault,
+        })
+        local expected_path = resolve(test_vault) .. '/' .. vault.get_project_root() .. '/todos.md'
+        vim.fn.mkdir(vim.fn.fnamemodify(expected_path, ':h'), 'p')
+        vim.fn.writefile({ '- [x] existing item' }, expected_path)
+        local initial_buf_name = vim.api.nvim_buf_get_name(0)
+        local original_input = vim.ui.input
+        vim.ui.input = function(_, on_confirm) ---@diagnostic disable-line: duplicate-set-field
+            on_confirm('new item')
+        end
+
+        vault.quick_add_todo()
+
+        vim.ui.input = original_input
+
+        assert.are.equal(initial_buf_name, vim.api.nvim_buf_get_name(0))
+        assert.are.same({ '- [x] existing item', '- [ ] new item' }, vim.fn.readfile(expected_path))
+    end)
+
+    it('creates todos.md with the todo template before appending when it does not exist yet', function()
+        local templates_dir = test_vault .. '/Templates'
+        vim.fn.mkdir(templates_dir, 'p')
+        local f = io.open(templates_dir .. '/Todo Template.md', 'w')
+        f:write('## Tasks')
+        f:close()
+        vault.setup({
+            vault_path = test_vault,
+            todos_path = test_vault,
+            templates_path = templates_dir,
+        })
+        local expected_path = resolve(test_vault) .. '/' .. vault.get_project_root() .. '/todos.md'
+        local original_input = vim.ui.input
+        vim.ui.input = function(_, on_confirm) ---@diagnostic disable-line: duplicate-set-field
+            on_confirm('new item')
+        end
+
+        vault.quick_add_todo()
+
+        vim.ui.input = original_input
+
+        assert.are.same({ '## Tasks', '- [ ] new item' }, vim.fn.readfile(expected_path))
+    end)
+
+    it('creates a plain todos.md when no template is configured', function()
+        vault.setup({
+            vault_path = test_vault,
+            todos_path = test_vault,
+        })
+        local expected_path = resolve(test_vault) .. '/' .. vault.get_project_root() .. '/todos.md'
+        local original_input = vim.ui.input
+        vim.ui.input = function(_, on_confirm) ---@diagnostic disable-line: duplicate-set-field
+            on_confirm('new item')
+        end
+
+        vault.quick_add_todo()
+
+        vim.ui.input = original_input
+
+        assert.are.same({ '- [ ] new item' }, vim.fn.readfile(expected_path))
+    end)
+
+    it('does nothing when the quick add todo prompt is cancelled', function()
+        vault.setup({
+            vault_path = test_vault,
+            todos_path = test_vault,
+        })
+        local expected_path = resolve(test_vault) .. '/' .. vault.get_project_root() .. '/todos.md'
+        local original_input = vim.ui.input
+        vim.ui.input = function(_, on_confirm) ---@diagnostic disable-line: duplicate-set-field
+            on_confirm(nil)
+        end
+
+        vault.quick_add_todo()
+
+        vim.ui.input = original_input
+
+        assert.are.equal(0, vim.fn.filereadable(expected_path))
+    end)
+
     it('does not warn when VAULT_PATH env var is unset', function()
         local original_env = vim.env.VAULT_PATH
         vim.env.VAULT_PATH = nil

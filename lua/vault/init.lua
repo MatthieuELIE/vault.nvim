@@ -8,6 +8,7 @@ M.setup = function(opts)
     config.setup(opts)
 
     vim.api.nvim_create_user_command('VaultToggleTodo', M.toggle_todo, { force = true })
+    vim.api.nvim_create_user_command('VaultQuickAddTodo', M.quick_add_todo, { force = true })
     vim.api.nvim_create_user_command('VaultToggleCheckbox', M.toggle_checkbox, { force = true })
     vim.api.nvim_create_user_command('VaultArchiveTodos', M.archive_todos, { force = true })
     vim.api.nvim_create_user_command('VaultToggleDiary', function(o)
@@ -22,6 +23,7 @@ M.setup = function(opts)
 
     local keys = vim.tbl_extend('force', {
         toggle_todo = '<leader>vt',
+        quick_add_todo = '<leader>vi',
         toggle_checkbox = '<leader>vc',
         toggle_diary = '<leader>vd',
         diary_next = '<leader>vn',
@@ -33,6 +35,7 @@ M.setup = function(opts)
 
     local keymap_specs = {
         { name = 'toggle_todo', fn = M.toggle_todo, desc = 'Toggle project todo' },
+        { name = 'quick_add_todo', fn = M.quick_add_todo, desc = 'Quick add a project todo' },
         { name = 'toggle_diary', fn = M.toggle_diary, desc = 'Toggle today diary' },
         { name = 'diary_next', fn = M.diary_next_day, desc = 'Go to next diary day' },
         { name = 'diary_prev', fn = M.diary_prev_day, desc = 'Go to previous diary day' },

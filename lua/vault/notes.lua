@@ -23,6 +23,26 @@ M.toggle_todo = function()
     buffer.open_or_close(config.state.todos_root .. '/' .. M.get_project_root() .. '/todos.md', 'todos')
 end
 
+M.quick_add_todo = function()
+    vim.ui.input({ prompt = 'Todo: ' }, function(input)
+        if not input or input == '' then
+            return
+        end
+
+        local path = config.state.todos_root .. '/' .. M.get_project_root() .. '/todos.md'
+        vim.fn.mkdir(vim.fn.fnamemodify(path, ':h'), 'p')
+
+        if vim.fn.filereadable(path) == 0 then
+            local template_path = buffer.resolve_template_path('todos')
+            if template_path then
+                vim.fn.writefile(vim.fn.readfile(template_path), path)
+            end
+        end
+
+        vim.fn.writefile({ '- [ ] ' .. input }, path, 'a')
+    end)
+end
+
 local function parse_date(date_str)
     local year, month, day = date_str:match('^(%d%d%d%d)-(%d%d)-(%d%d)$')
     if not year then

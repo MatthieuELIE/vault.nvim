@@ -21,6 +21,8 @@ one daily diary note per day, toggling either open or closed in a split.
 
 Features:
   - Toggle a project-specific Markdown TODO list.
+  - Quickly append a todo to the current project's todos.md via a prompt,
+    without opening the buffer.
   - Open today's diary note.
   - Navigate to the previous/next diary day, or jump to an arbitrary date.
   - Search the whole vault, or scope to todos/diary notes only (Telescope if
@@ -105,6 +107,14 @@ opts.keys ~
 :VaultToggleTodo
     Toggle the current project's `todos.md`.
 
+                                                          *:VaultQuickAddTodo*
+:VaultQuickAddTodo
+    Prompt for a line of text and append it as `- [ ] {text}` to the end of
+    the current project's `todos.md`, without opening or displaying the
+    buffer. Creates the file (and its parent directory) if it doesn't exist
+    yet, seeding it from the `todos` template first if `templates_path` is
+    configured. Does nothing if the prompt is cancelled or left empty.
+
                                                         *:VaultToggleCheckbox*
 :VaultToggleCheckbox
     Toggle a leading `- [ ]`/`- [x]` on the current line. Only acts inside a
@@ -154,6 +164,7 @@ opts.keys ~
 Normal mode, all overridable via `opts.keys` (see |vault-opt-keys|):
 
     <leader>vt    |:VaultToggleTodo|
+    <leader>vi    |:VaultQuickAddTodo|
     <leader>vc    |:VaultToggleCheckbox|  (buffer-local, only in todos.md)
     <leader>va    |:VaultArchiveTodos|    (buffer-local, only in todos.md)
     <leader>vd    |:VaultToggleDiary|
