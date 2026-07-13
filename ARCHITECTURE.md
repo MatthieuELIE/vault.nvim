@@ -81,6 +81,25 @@ The todo/diary/checkbox/search feature functions, built on
   `todos.md`. Toggles a leading `- [ ]` / `- [x]` on the current line,
   preserving indentation, adding the checkbox prefix if the line doesn't have
   one yet.
+- **`M.archive_todos()`** — only acts when the current buffer name ends in
+  `todos.md`; a no-op otherwise. Splits the buffer's lines into checked
+  (`- [x]`, any indentation) and the rest, in document order. If nothing is
+  checked, `vim.notify`s an info and stops without touching the buffer or
+  disk. Otherwise: sets the buffer to the remaining lines and saves it; if
+  the save fails (buffer still `modified` afterwards), warns and aborts
+  *before* touching `archive.md`, so a copy is never persisted to the
+  archive without the removal being confirmed on disk first — same
+  abort-on-save-failure principle as `buffer.close_buffer`. The archived
+  lines are then appended to `archive.md` next to `todos.md` (project name
+  taken from the parent directory of the path, not `get_project_root()`, so
+  it's correct even for a `todos.md` outside the current cwd's project). A
+  newly created `archive.md` is prefixed with a `# <project> Archive` title;
+  entries are grouped under a `### YYYY-MM-DD` heading, reusing the last
+  heading in the file if it already matches today instead of duplicating it.
+  There's no tree-aware parsing: if a checked line has an unchecked
+  sub-item (a more-indented `- [ ]` line right after it), the sub-item is
+  left behind in `todos.md` rather than moved, and a single grouped
+  `vim.notify` warning lists which archived items left one behind.
 - **`M.search(input)`** — vault-wide search. `input`'s leading word is matched
   against a scope table (`SEARCH_SCOPES`: `todos` → `todos_root`/
   `*/todos.md`, `daily` → `daily_root`/`**/*.md`, default `all` →
@@ -102,13 +121,15 @@ Thin entry point. Re-exports `notes.lua`'s public API unchanged (so
 
 1. Calls `config.setup(opts)`.
 2. Registers user commands: `VaultToggleTodo`, `VaultToggleCheckbox`,
-   `VaultToggleDiary` (optional `YYYY-MM-DD` arg), `VaultDiaryNext`,
-   `VaultDiaryPrev`, `VaultDiaryGoto`, `VaultSearch` (optional `[todos|daily] query` arg).
-3. Sets keymaps (defaults `<leader>vt/vc/vd/vn/vp/vg/vs`), overridable per-key
-   via `opts.keys`.
-4. Buffer-locally maps the checkbox toggle only inside
-   `<vault_path>/*/todos.md` buffers, via a `BufEnter` autocommand — so the
-   keymap doesn't shadow anything in unrelated buffers.
+   `VaultArchiveTodos`, `VaultToggleDiary` (optional `YYYY-MM-DD` arg),
+   `VaultDiaryNext`, `VaultDiaryPrev`, `VaultDiaryGoto`, `VaultSearch`
+   (optional `[todos|daily] query` arg).
+3. Sets keymaps (defaults `<leader>vt/vc/va/vd/vn/vp/vg/vs`), overridable
+   per-key via `opts.keys`.
+4. Buffer-locally maps the checkbox toggle and the todo archiver only inside
+   `<vault_path>/*/todos.md` buffers, via a shared `BufEnter` autocommand
+   iterating a small list of buffer-local specs — so neither keymap shadows
+   anything in unrelated buffers.
 
 ## Tests
 

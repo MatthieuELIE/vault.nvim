@@ -9,6 +9,7 @@ M.setup = function(opts)
 
     vim.api.nvim_create_user_command('VaultToggleTodo', M.toggle_todo, { force = true })
     vim.api.nvim_create_user_command('VaultToggleCheckbox', M.toggle_checkbox, { force = true })
+    vim.api.nvim_create_user_command('VaultArchiveTodos', M.archive_todos, { force = true })
     vim.api.nvim_create_user_command('VaultToggleDiary', function(o)
         M.toggle_diary(o.args)
     end, { force = true, nargs = '?' })
@@ -27,6 +28,7 @@ M.setup = function(opts)
         diary_prev = '<leader>vp',
         diary_goto = '<leader>vg',
         search = '<leader>vs',
+        archive_todos = '<leader>va',
     }, opts.keys or {})
 
     local keymap_specs = {
@@ -43,16 +45,24 @@ M.setup = function(opts)
         end
     end
 
-    if keys.toggle_checkbox then
+    local buffer_local_keymap_specs = {
+        { name = 'toggle_checkbox', fn = M.toggle_checkbox, desc = 'Toggle markdown checkbox' },
+        { name = 'archive_todos', fn = M.archive_todos, desc = 'Archive checked todos' },
+    }
+    if keys.toggle_checkbox or keys.archive_todos then
         vim.api.nvim_create_autocmd('BufEnter', {
             pattern = config.state.vault_path .. '/*/todos.md',
             callback = function(args)
-                vim.keymap.set(
-                    'n',
-                    keys.toggle_checkbox,
-                    M.toggle_checkbox,
-                    { noremap = true, buffer = args.buf, desc = 'Toggle markdown checkbox' }
-                )
+                for _, spec in ipairs(buffer_local_keymap_specs) do
+                    if keys[spec.name] then
+                        vim.keymap.set(
+                            'n',
+                            keys[spec.name],
+                            spec.fn,
+                            { noremap = true, buffer = args.buf, desc = spec.desc }
+                        )
+                    end
+                end
             end,
         })
     end
