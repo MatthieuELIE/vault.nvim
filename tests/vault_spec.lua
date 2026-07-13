@@ -1086,6 +1086,51 @@ describe('vault', function()
         assert.truthy(notifications[1].msg:match('could not save'))
     end)
 
+    it('counts unchecked todos in the current project todos.md', function()
+        vault.setup({
+            vault_path = test_vault,
+            todos_path = test_vault,
+        })
+        vault.toggle_todo()
+        local buf = vim.api.nvim_get_current_buf()
+        vim.api.nvim_buf_set_lines(buf, 0, -1, false, {
+            '- [ ] pending 1',
+            '- [x] done',
+            '- [ ] pending 2',
+        })
+        vim.cmd('silent! write')
+
+        local count = vault.todo_count()
+
+        assert.are.equal(2, count)
+    end)
+
+    it('returns 0 when the project todos.md does not exist', function()
+        vault.setup({
+            vault_path = test_vault,
+            todos_path = test_vault,
+        })
+
+        local count = vault.todo_count()
+
+        assert.are.equal(0, count)
+    end)
+
+    it('returns 0 when all todos are checked', function()
+        vault.setup({
+            vault_path = test_vault,
+            todos_path = test_vault,
+        })
+        vault.toggle_todo()
+        local buf = vim.api.nvim_get_current_buf()
+        vim.api.nvim_buf_set_lines(buf, 0, -1, false, { '- [x] done' })
+        vim.cmd('silent! write')
+
+        local count = vault.todo_count()
+
+        assert.are.equal(0, count)
+    end)
+
     it('populates the quickfix list with matches across projects todos.md files', function()
         vault.setup({
             vault_path = test_vault,

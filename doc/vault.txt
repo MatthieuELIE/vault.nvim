@@ -9,7 +9,8 @@ CONTENTS                                                     *vault-contents*
   4. Configuration ................................ |vault-configuration|
   5. Commands ..................................... |vault-commands|
   6. Default mappings ............................. |vault-mappings|
-  7. Contributing ................................. |vault-contributing|
+  7. Statusline integration ....................... |vault-statusline|
+  8. Contributing ................................. |vault-contributing|
 
 ==============================================================================
 1. Introduction                                          *vault-introduction*
@@ -174,7 +175,32 @@ Normal mode, all overridable via `opts.keys` (see |vault-opt-keys|):
     <leader>vs    |:VaultSearch|
 
 ==============================================================================
-7. Contributing                                          *vault-contributing*
+7. Statusline integration                                  *vault-statusline*
+
+                                                            *vault.todo_count()*
+require('vault').todo_count() ~
+    Returns the number of unchecked (`- [ ]`) lines in the current project's
+    `todos.md` (`0` if the file doesn't exist yet). Plain Lua function, no
+    dependency on a particular statusline plugin — wire it into whichever
+    one you use. Example for lualine: >
+
+    require('lualine').setup({
+        sections = {
+            lualine_x = {
+                {
+                    require('vault').todo_count,
+                    icon = '',
+                    cond = function()
+                        return require('vault').todo_count() > 0
+                    end,
+                },
+            },
+        },
+    })
+
+<
+==============================================================================
+8. Contributing                                          *vault-contributing*
 
 See docs/ARCHITECTURE.md and docs/CONTRIBUTING.md in the repository for
 module boundaries and the development workflow (tests, lint, CI).

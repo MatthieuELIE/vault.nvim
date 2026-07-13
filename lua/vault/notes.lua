@@ -288,4 +288,19 @@ M.archive_todos = function()
     append_to_archive(archive_path, project_name, archived)
 end
 
+M.todo_count = function()
+    local path = config.state.todos_root .. '/' .. M.get_project_root() .. '/todos.md'
+    if vim.fn.filereadable(path) == 0 then
+        return 0
+    end
+
+    local count = 0
+    for _, line in ipairs(vim.fn.readfile(path)) do
+        if line_checkbox_state(line) == ' ' then
+            count = count + 1
+        end
+    end
+    return count
+end
+
 return M
