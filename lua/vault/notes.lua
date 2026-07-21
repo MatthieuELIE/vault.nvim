@@ -29,17 +29,22 @@ M.quick_add_todo = function()
             return
         end
 
-        local path = config.state.todos_root .. '/' .. M.get_project_root() .. '/todos.md'
-        vim.fn.mkdir(vim.fn.fnamemodify(path, ':h'), 'p')
-
-        if vim.fn.filereadable(path) == 0 then
-            local template_path = buffer.resolve_template_path('todos')
-            if template_path then
-                vim.fn.writefile(vim.fn.readfile(template_path), path)
-            end
+        local path = vim.fs.normalize(config.state.todos_root .. '/' .. M.get_project_root() .. '/todos.md')
+        local bufnr = vim.fn.bufnr(path)
+        if bufnr ~= -1 then
+            vim.api.nvim_buf_set_lines(bufnr, -1, -1, false, { '- [ ] ' .. input })
+            buffer.try_save(bufnr)
+            return
         end
 
-        vim.fn.writefile({ '- [ ] ' .. input }, path, 'a')
+        if not buffer.ensure_dir(path) or not buffer.ensure_file(path, 'todos') then
+            return
+        end
+
+        local ok, result = pcall(vim.fn.writefile, { '- [ ] ' .. input }, path, 'a')
+        if not ok or result == -1 then
+            vim.notify('vault.nvim: could not write to ' .. path, vim.log.levels.ERROR)
+        end
     end)
 end
 
@@ -270,9 +275,7 @@ M.archive_todos = function()
     end
 
     vim.api.nvim_buf_set_lines(0, 0, -1, false, remaining)
-    vim.cmd('silent! write')
-    if vim.bo.modified then
-        vim.notify('vault.nvim: could not save todos.md, archiving aborted', vim.log.levels.WARN)
+    if not buffer.try_save(0, 'archiving aborted') then
         return
     end
 
