@@ -17,16 +17,37 @@ M.resolve_template_path = function(note_type)
     return template_path
 end
 
-local function apply_template(note_type)
-    local template_path = M.resolve_template_path(note_type)
-    if not template_path then
-        return
+M.ensure_dir = function(path)
+    local parent = vim.fn.fnamemodify(path, ':h')
+    if vim.fn.isdirectory(parent) == 0 then
+        local ok, created = pcall(vim.fn.mkdir, parent, 'p')
+        if not ok or created == 0 then
+            vim.notify('vault.nvim: could not create directory ' .. parent, vim.log.levels.ERROR)
+            return false
+        end
     end
-
-    vim.api.nvim_buf_set_lines(0, 0, -1, false, vim.fn.readfile(template_path))
+    return true
 end
 
-local function close_buffer(bufnr)
+M.ensure_file = function(path, note_type)
+    if vim.fn.filereadable(path) == 1 then
+        return true
+    end
+
+    local template_path = M.resolve_template_path(note_type)
+    if not template_path then
+        return true
+    end
+
+    if vim.fn.writefile(vim.fn.readfile(template_path), path) == -1 then
+        vim.notify('vault.nvim: could not write ' .. path, vim.log.levels.ERROR)
+        return false
+    end
+
+    return true
+end
+
+M.try_save = function(bufnr)
     local name = vim.api.nvim_buf_get_name(bufnr)
     vim.api.nvim_buf_call(bufnr, function()
         vim.cmd('silent! write')
@@ -34,6 +55,15 @@ local function close_buffer(bufnr)
 
     if vim.bo[bufnr].modified then
         vim.notify('vault.nvim: could not save ' .. vim.fn.fnamemodify(name, ':t'), vim.log.levels.WARN)
+        return false
+    end
+
+    return true
+end
+
+local function close_buffer(bufnr)
+    local name = vim.api.nvim_buf_get_name(bufnr)
+    if not M.try_save(bufnr) then
         return false
     end
 
@@ -113,19 +143,11 @@ M.open_or_close = function(path, note_type)
         end
     end
 
-    local parent = vim.fn.fnamemodify(path, ':h')
-    if vim.fn.isdirectory(parent) == 0 then
-        local ok, created = pcall(vim.fn.mkdir, parent, 'p')
-        if not ok or created == 0 then
-            vim.notify('vault.nvim: could not create directory ' .. parent, vim.log.levels.ERROR)
-            return
-        end
+    if not M.ensure_dir(path) or not M.ensure_file(path, note_type) then
+        return
     end
 
     vim.cmd(config.state.split .. ' ' .. vim.fn.fnameescape(path))
-    if vim.fn.filereadable(path) == 0 then
-        apply_template(note_type)
-    end
 end
 
 return M

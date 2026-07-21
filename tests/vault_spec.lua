@@ -326,6 +326,49 @@ describe('vault', function()
         assert.are.same({ '- [x] existing item', '- [ ] new item' }, vim.fn.readfile(expected_path))
     end)
 
+    it('appends into an already-open todos.md buffer instead of the file on disk', function()
+        vault.setup({
+            vault_path = test_vault,
+            todos_path = test_vault,
+        })
+        local expected_path = resolve(test_vault) .. '/' .. vault.get_project_root() .. '/todos.md'
+        vault.toggle_todo()
+        local buf = vim.api.nvim_get_current_buf()
+        vim.api.nvim_buf_set_lines(buf, 0, -1, false, { '- [ ] unsaved edit' })
+        local original_input = vim.ui.input
+        vim.ui.input = function(_, on_confirm) ---@diagnostic disable-line: duplicate-set-field
+            on_confirm('new item')
+        end
+
+        vault.quick_add_todo()
+
+        vim.ui.input = original_input
+
+        assert.are.same({ '- [ ] unsaved edit', '- [ ] new item' }, vim.api.nvim_buf_get_lines(buf, 0, -1, false))
+        assert.are.same({ '- [ ] unsaved edit', '- [ ] new item' }, vim.fn.readfile(expected_path))
+    end)
+
+    it('warns and aborts quick add when the parent directory cannot be created', function()
+        local blocking_file = test_vault .. '/blocked'
+        local f = io.open(blocking_file, 'w')
+        f:write('x')
+        f:close()
+
+        vault.setup({ vault_path = test_vault, todos_path = blocking_file })
+        local original_input = vim.ui.input
+        vim.ui.input = function(_, on_confirm) ---@diagnostic disable-line: duplicate-set-field
+            on_confirm('new item')
+        end
+
+        vault.quick_add_todo()
+
+        vim.ui.input = original_input
+
+        assert.are.equal(1, #notifications)
+        assert.are.equal(vim.log.levels.ERROR, notifications[1].level)
+        assert.truthy(notifications[1].msg:match('could not create directory'))
+    end)
+
     it('creates todos.md with the todo template before appending when it does not exist yet', function()
         local templates_dir = test_vault .. '/Templates'
         vim.fn.mkdir(templates_dir, 'p')
@@ -510,6 +553,20 @@ describe('vault', function()
         os.date = original_os_date
 
         local expected_path = resolve(test_vault) .. '/daily/2025/12/25-12-2025.md'
+        local current_buf = vim.api.nvim_get_current_buf()
+        local buf_name = vim.api.nvim_buf_get_name(current_buf)
+        assert.are.equal(expected_path, resolve(buf_name))
+    end)
+
+    it('rolls a calendar-invalid date over to the next month rather than falling back to today', function()
+        vault.setup({
+            vault_path = test_vault,
+            daily_path = test_vault .. '/daily',
+        })
+
+        vault.toggle_diary('2026-02-30')
+
+        local expected_path = resolve(test_vault) .. '/daily/2026/03/02-03-2026.md'
         local current_buf = vim.api.nvim_get_current_buf()
         local buf_name = vim.api.nvim_buf_get_name(current_buf)
         assert.are.equal(expected_path, resolve(buf_name))
