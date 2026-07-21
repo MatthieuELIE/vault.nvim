@@ -389,6 +389,61 @@ describe('vault', function()
         assert.truthy(notifications[1].msg:match('could not create directory'))
     end)
 
+    it('warns instead of crashing when quick add cannot write the todo template to disk', function()
+        local templates_dir = test_vault .. '/Templates'
+        vim.fn.mkdir(templates_dir, 'p')
+        local f = io.open(templates_dir .. '/Todo Template.md', 'w')
+        f:write('## Tasks')
+        f:close()
+
+        vault.setup({
+            vault_path = test_vault,
+            todos_path = test_vault,
+            templates_path = templates_dir,
+        })
+        local expected_path = resolve(test_vault) .. '/' .. vault.get_project_root() .. '/todos.md'
+        local project_dir = vim.fn.fnamemodify(expected_path, ':h')
+        vim.fn.mkdir(project_dir, 'p')
+        vim.fn.setfperm(project_dir, 'r-xr-xr-x')
+        local original_input = vim.ui.input
+        vim.ui.input = function(_, on_confirm) ---@diagnostic disable-line: duplicate-set-field
+            on_confirm('new item')
+        end
+
+        vault.quick_add_todo()
+
+        vim.ui.input = original_input
+        vim.fn.setfperm(project_dir, 'rwxr-xr-x')
+
+        assert.are.equal(1, #notifications)
+        assert.are.equal(vim.log.levels.ERROR, notifications[1].level)
+        assert.truthy(notifications[1].msg:match('could not write'))
+    end)
+
+    it('warns instead of crashing when quick add cannot append to an existing todos.md', function()
+        vault.setup({
+            vault_path = test_vault,
+            todos_path = test_vault,
+        })
+        local expected_path = resolve(test_vault) .. '/' .. vault.get_project_root() .. '/todos.md'
+        local project_dir = vim.fn.fnamemodify(expected_path, ':h')
+        vim.fn.mkdir(project_dir, 'p')
+        vim.fn.setfperm(project_dir, 'r-xr-xr-x')
+        local original_input = vim.ui.input
+        vim.ui.input = function(_, on_confirm) ---@diagnostic disable-line: duplicate-set-field
+            on_confirm('new item')
+        end
+
+        vault.quick_add_todo()
+
+        vim.ui.input = original_input
+        vim.fn.setfperm(project_dir, 'rwxr-xr-x')
+
+        assert.are.equal(1, #notifications)
+        assert.are.equal(vim.log.levels.ERROR, notifications[1].level)
+        assert.truthy(notifications[1].msg:match('could not write to'))
+    end)
+
     it('creates todos.md with the todo template before appending when it does not exist yet', function()
         local templates_dir = test_vault .. '/Templates'
         vim.fn.mkdir(templates_dir, 'p')

@@ -39,7 +39,8 @@ M.ensure_file = function(path, note_type)
         return true
     end
 
-    if vim.fn.writefile(vim.fn.readfile(template_path), path) == -1 then
+    local ok, result = pcall(vim.fn.writefile, vim.fn.readfile(template_path), path)
+    if not ok or result == -1 then
         vim.notify('vault.nvim: could not write ' .. path, vim.log.levels.ERROR)
         return false
     end
@@ -56,14 +57,15 @@ local function apply_template_to_buffer(note_type)
     vim.api.nvim_buf_set_lines(0, 0, -1, false, vim.fn.readfile(template_path))
 end
 
-M.try_save = function(bufnr)
+M.try_save = function(bufnr, context)
     local name = vim.api.nvim_buf_get_name(bufnr)
     vim.api.nvim_buf_call(bufnr, function()
         vim.cmd('silent! write')
     end)
 
     if vim.bo[bufnr].modified then
-        vim.notify('vault.nvim: could not save ' .. vim.fn.fnamemodify(name, ':t'), vim.log.levels.WARN)
+        local suffix = context and (', ' .. context) or ''
+        vim.notify('vault.nvim: could not save ' .. vim.fn.fnamemodify(name, ':t') .. suffix, vim.log.levels.WARN)
         return false
     end
 

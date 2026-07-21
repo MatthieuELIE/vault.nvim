@@ -41,7 +41,8 @@ M.quick_add_todo = function()
             return
         end
 
-        if vim.fn.writefile({ '- [ ] ' .. input }, path, 'a') == -1 then
+        local ok, result = pcall(vim.fn.writefile, { '- [ ] ' .. input }, path, 'a')
+        if not ok or result == -1 then
             vim.notify('vault.nvim: could not write to ' .. path, vim.log.levels.ERROR)
         end
     end)
@@ -274,7 +275,7 @@ M.archive_todos = function()
     end
 
     vim.api.nvim_buf_set_lines(0, 0, -1, false, remaining)
-    if not buffer.try_save(0) then
+    if not buffer.try_save(0, 'archiving aborted') then
         return
     end
 
