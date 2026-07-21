@@ -216,6 +216,26 @@ describe('vault', function()
         assert.are.same({ '---', 'type: todo', '---', '', '## Tasks' }, lines)
     end)
 
+    it('does not write the template to disk until the new todos.md buffer is saved', function()
+        local templates_dir = test_vault .. '/Templates'
+        vim.fn.mkdir(templates_dir, 'p')
+        local f = io.open(templates_dir .. '/Todo Template.md', 'w')
+        f:write('## Tasks\n')
+        f:close()
+
+        vault.setup({
+            vault_path = test_vault,
+            todos_path = test_vault,
+            templates_path = templates_dir,
+        })
+        local expected_path = resolve(test_vault) .. '/' .. vault.get_project_root() .. '/todos.md'
+
+        vault.toggle_todo()
+
+        assert.are.equal(0, vim.fn.filereadable(expected_path))
+        assert.is_true(vim.bo.modified)
+    end)
+
     it('copies daily template content into a newly created diary note', function()
         local templates_dir = test_vault .. '/Templates'
         vim.fn.mkdir(templates_dir, 'p')

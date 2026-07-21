@@ -47,6 +47,15 @@ M.ensure_file = function(path, note_type)
     return true
 end
 
+local function apply_template_to_buffer(note_type)
+    local template_path = M.resolve_template_path(note_type)
+    if not template_path then
+        return
+    end
+
+    vim.api.nvim_buf_set_lines(0, 0, -1, false, vim.fn.readfile(template_path))
+end
+
 M.try_save = function(bufnr)
     local name = vim.api.nvim_buf_get_name(bufnr)
     vim.api.nvim_buf_call(bufnr, function()
@@ -143,11 +152,15 @@ M.open_or_close = function(path, note_type)
         end
     end
 
-    if not M.ensure_dir(path) or not M.ensure_file(path, note_type) then
+    if not M.ensure_dir(path) then
         return
     end
 
+    local is_new = vim.fn.filereadable(path) == 0
     vim.cmd(config.state.split .. ' ' .. vim.fn.fnameescape(path))
+    if is_new then
+        apply_template_to_buffer(note_type)
+    end
 end
 
 return M
