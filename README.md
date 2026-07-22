@@ -13,6 +13,21 @@ A lightweight, project-specific task manager and diary plugin for Neovim.
 - Automatically handles directory creation based on git root or active project root.
 - Simple, indentation-aware checkbox toggler.
 
+## Screenshots
+
+Project todos, checked off with `VaultToggleCheckbox` and rendered with
+[render-markdown.nvim](https://github.com/MeanderingProgrammer/render-markdown.nvim):
+
+![Todo list](screenshots/todos.png)
+
+Today's diary note, opened with `VaultToggleDiary`:
+
+![Diary note](screenshots/diary.png)
+
+`VaultSearch` scoped to the vault, using Telescope's live grep:
+
+![Vault search](screenshots/search.png)
+
 ## Requirements
 
 Neovim >= 0.8 (the plugin relies on the `vim.fs` module — `vim.fs.find`,
