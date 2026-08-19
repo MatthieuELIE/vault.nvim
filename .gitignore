@@ -1,7 +1,4 @@
 .DS_Store
-doc/tags
-.planning/
-
-# Code review reports
-REPORT.md
 .artifacts/
+.planning/
+doc/tags
