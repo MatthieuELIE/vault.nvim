@@ -1499,5 +1499,6 @@ describe('vault', function()
 
         assert.are.equal('', vim.fn.maparg('<leader>vc', 'n'))
         assert.truthy(vim.fn.maparg('<leader>va', 'n') ~= '')
+        assert.are.equal('', vim.fn.maparg('<leader>vt', 'n'))
     end)
 end)

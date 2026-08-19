@@ -21,9 +21,34 @@ M.setup = function(opts)
         M.search(o.args)
     end, { force = true, nargs = '?' })
 
+    local global_keymap_specs = {
+        { name = 'toggle_todo', fn = M.toggle_todo, desc = 'Toggle project todo' },
+        { name = 'quick_add_todo', fn = M.quick_add_todo, desc = 'Quick add a project todo' },
+        { name = 'toggle_diary', fn = M.toggle_diary, desc = 'Toggle today diary' },
+        { name = 'diary_next', fn = M.diary_next_day, desc = 'Go to next diary day' },
+        { name = 'diary_prev', fn = M.diary_prev_day, desc = 'Go to previous diary day' },
+        { name = 'diary_goto', fn = M.diary_goto, desc = 'Go to a diary date' },
+        { name = 'search', fn = M.search, desc = 'Search the vault' },
+    }
+
+    local function opts_into_globals(keys)
+        if keys == true then
+            return true
+        end
+        if type(keys) ~= 'table' then
+            return false
+        end
+        for _, spec in ipairs(global_keymap_specs) do
+            if keys[spec.name] ~= nil then
+                return true
+            end
+        end
+        return false
+    end
+
     local key_overrides = opts.keys == true and {} or (opts.keys or {})
 
-    if opts.keys then
+    if opts_into_globals(opts.keys) then
         local global_keys = vim.tbl_extend('force', {
             toggle_todo = '<leader>vt',
             quick_add_todo = '<leader>vi',
@@ -34,15 +59,6 @@ M.setup = function(opts)
             search = '<leader>vs',
         }, key_overrides)
 
-        local global_keymap_specs = {
-            { name = 'toggle_todo', fn = M.toggle_todo, desc = 'Toggle project todo' },
-            { name = 'quick_add_todo', fn = M.quick_add_todo, desc = 'Quick add a project todo' },
-            { name = 'toggle_diary', fn = M.toggle_diary, desc = 'Toggle today diary' },
-            { name = 'diary_next', fn = M.diary_next_day, desc = 'Go to next diary day' },
-            { name = 'diary_prev', fn = M.diary_prev_day, desc = 'Go to previous diary day' },
-            { name = 'diary_goto', fn = M.diary_goto, desc = 'Go to a diary date' },
-            { name = 'search', fn = M.search, desc = 'Search the vault' },
-        }
         for _, spec in ipairs(global_keymap_specs) do
             if global_keys[spec.name] then
                 vim.keymap.set('n', global_keys[spec.name], spec.fn, { noremap = true, desc = spec.desc })
