@@ -273,7 +273,9 @@ describe('vault', function()
         local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
 
         assert.are.same({ '' }, lines)
-        assert.are.equal(0, #notifications)
+        assert.are.equal(1, #notifications)
+        assert.are.equal(vim.log.levels.WARN, notifications[1].level)
+        assert.truthy(notifications[1].msg:match('template file not found'))
     end)
 
     it('does not re-apply the template to an already existing todos.md', function()

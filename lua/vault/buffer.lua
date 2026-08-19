@@ -11,6 +11,7 @@ M.resolve_template_path = function(note_type)
 
     local template_path = state.templates_path .. '/' .. filename
     if vim.fn.filereadable(template_path) == 0 then
+        vim.notify('vault.nvim: template file not found: ' .. template_path, vim.log.levels.WARN)
         return nil
     end
 
