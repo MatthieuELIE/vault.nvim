@@ -35,6 +35,18 @@ describe('vault', function()
         vim.api.nvim_win_close = original_win_close
         vim.fn.delete(test_vault, 'rf')
         vim.cmd('silent! %bwipeout!')
+        for _, lhs in ipairs({
+            '<leader>vt',
+            '<leader>vi',
+            '<leader>vd',
+            '<leader>vn',
+            '<leader>vp',
+            '<leader>vg',
+            '<leader>vs',
+            '<leader>x',
+        }) do
+            pcall(vim.keymap.del, 'n', lhs)
+        end
     end)
 
     it('opens todo file when not already open', function()
@@ -1432,5 +1444,61 @@ describe('vault', function()
 
         local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
         assert.are.equal('some line', lines[1])
+    end)
+
+    it('does not set global keymaps when opts.keys is omitted', function()
+        vault.setup({
+            vault_path = test_vault,
+            todos_path = test_vault,
+        })
+
+        assert.are.equal('', vim.fn.maparg('<leader>vt', 'n'))
+    end)
+
+    it('sets the default global keymaps when opts.keys = true', function()
+        vault.setup({
+            vault_path = test_vault,
+            todos_path = test_vault,
+            keys = true,
+        })
+
+        assert.truthy(vim.fn.maparg('<leader>vt', 'n') ~= '')
+    end)
+
+    it('overrides a single global keymap while keeping other defaults when opts.keys is a table', function()
+        vault.setup({
+            vault_path = test_vault,
+            todos_path = test_vault,
+            keys = { toggle_todo = '<leader>x' },
+        })
+
+        assert.truthy(vim.fn.maparg('<leader>x', 'n') ~= '')
+        assert.are.equal('', vim.fn.maparg('<leader>vt', 'n'))
+        assert.truthy(vim.fn.maparg('<leader>vs', 'n') ~= '')
+    end)
+
+    it('keeps buffer-local keymaps active inside todos.md even when opts.keys is omitted', function()
+        vault.setup({
+            vault_path = test_vault,
+            todos_path = test_vault,
+        })
+
+        vault.toggle_todo()
+
+        assert.truthy(vim.fn.maparg('<leader>vc', 'n') ~= '')
+    end)
+
+    it('overrides a buffer-local keymap via opts.keys without opting into global keymaps', function()
+        vault.setup({
+            vault_path = test_vault,
+            todos_path = test_vault,
+            keys = { toggle_checkbox = false },
+        })
+
+        vault.toggle_todo()
+
+        assert.are.equal('', vim.fn.maparg('<leader>vc', 'n'))
+        assert.truthy(vim.fn.maparg('<leader>va', 'n') ~= '')
+        assert.are.equal('', vim.fn.maparg('<leader>vt', 'n'))
     end)
 end)

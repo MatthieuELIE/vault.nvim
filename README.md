@@ -43,8 +43,6 @@ Using [lazy.nvim](https://github.com/folke/lazy.nvim) — add this spec to the l
     keys = {
         { '<leader>vt', '<cmd>VaultToggleTodo<CR>', desc = 'Toggle Vault Todo' },
         { '<leader>vi', '<cmd>VaultQuickAddTodo<CR>', desc = 'Quick Add Vault Todo' },
-        { '<leader>vc', '<cmd>VaultToggleCheckbox<CR>', desc = 'Toggle Vault Checkbox' },
-        { '<leader>va', '<cmd>VaultArchiveTodos<CR>', desc = 'Archive Vault Todos' },
         { '<leader>vd', '<cmd>VaultToggleDiary<CR>', desc = 'Toggle Vault Diary' },
         { '<leader>vn', '<cmd>VaultDiaryNext<CR>', desc = 'Next Vault Diary Day' },
         { '<leader>vp', '<cmd>VaultDiaryPrev<CR>', desc = 'Previous Vault Diary Day' },
@@ -54,6 +52,9 @@ Using [lazy.nvim](https://github.com/folke/lazy.nvim) — add this spec to the l
     opts = {}
 }
 ```
+
+`VaultToggleCheckbox`/`VaultArchiveTodos` aren't listed above: they're bound
+automatically inside `todos.md` buffers, see `keys` below.
 
 Using [vim.pack](https://neovim.io/doc/user/pack.html) (built into Neovim >= 0.12, no plugin manager needed) — drop this straight into `init.lua`:
 
@@ -93,17 +94,26 @@ opts = {
         daily = 'Daily Note Template.md',  -- one only if your filenames differ
     },
 
-    keys = {
-        toggle_todo     = '<leader>vt',
-        quick_add_todo  = '<leader>vi',
-        toggle_checkbox = '<leader>vc',
-        archive_todos   = '<leader>va',
-        toggle_diary    = '<leader>vd',
-        diary_next      = '<leader>vn',
-        diary_prev      = '<leader>vp',
-        diary_goto      = '<leader>vg',
-        search          = '<leader>vs',
-    },
+    -- Global keymaps are opt-in: omit `keys` entirely and vault.nvim won't
+    -- touch your keymaps, only the `:Vault*` commands are available.
+    -- `keys = true` enables the defaults below as-is; pass a table instead
+    -- to override individual entries (the rest still fall back to their
+    -- default). `toggle_checkbox`/`archive_todos` are buffer-local (only
+    -- active inside vault todos.md buffers) and stay on regardless of
+    -- `keys`, but can still be remapped/disabled through this same table.
+    keys = true, -- or e.g. { toggle_todo = '<leader>x', search = false }
+
+    -- keys = {
+    --     toggle_todo     = '<leader>vt',
+    --     quick_add_todo  = '<leader>vi',
+    --     toggle_checkbox = '<leader>vc',
+    --     archive_todos   = '<leader>va',
+    --     toggle_diary    = '<leader>vd',
+    --     diary_next      = '<leader>vn',
+    --     diary_prev      = '<leader>vp',
+    --     diary_goto      = '<leader>vg',
+    --     search          = '<leader>vs',
+    -- },
 }
 ```
 
